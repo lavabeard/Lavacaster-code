@@ -521,6 +521,16 @@ input[type=file]{display:none}
         <option value="rtp">RTP — MPEG-TS over RTP</option>
       </select>
     </div>
+    <div class="divider"></div>
+    <div class="stag">Server</div>
+    <div class="fg">
+      <label class="fl">Restart or shut down the LavaCast server process</label>
+      <div class="fhint">Restart applies changes and reconnects automatically · Shutdown stops the server entirely</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-amber" onclick="sysRestart()">↺ Restart</button>
+        <button class="btn btn-stop"  onclick="sysShutdown()">⏻ Shutdown</button>
+      </div>
+    </div>
     <div class="ma">
       <button class="btn btn-ghost" onclick="closeMod('m-settings')">Cancel</button>
       <button class="btn btn-lava"  onclick="saveSettings()">Save</button>
@@ -1044,6 +1054,22 @@ async function saveSettings(){
   const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json(); if(d.error){toast(d.error,true);return;}
   closeMod('m-settings'); toast('Settings saved.');
+}
+
+async function sysRestart(){
+  if(!confirm('Restart the LavaCast server?\n\nAll active streams will stop. The page will reconnect automatically when the server is back up.')) return;
+  closeMod('m-settings');
+  toast('Restarting server…');
+  addActivity('system','Server restart requested');
+  await fetch('/api/system/restart',{method:'POST'}).catch(()=>{});
+}
+
+async function sysShutdown(){
+  if(!confirm('Shut down the LavaCast server?\n\nAll active streams will stop. The server will NOT restart automatically.')) return;
+  closeMod('m-settings');
+  toast('Server shutting down…', true);
+  addActivity('system','Server shutdown requested');
+  await fetch('/api/system/shutdown',{method:'POST'}).catch(()=>{});
 }
 
 function toggleActivity(){ activityOpen=!activityOpen; document.getElementById('ap').classList.toggle('open',activityOpen); if(activityOpen){apHasNew=false;document.getElementById('ap-toggle').classList.remove('has-new');} }

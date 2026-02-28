@@ -15,6 +15,7 @@ Module layout
 """
 
 import os
+import sys
 import threading
 import time
 
@@ -336,6 +337,34 @@ def get_thumbnail(cid):
         max_age=0,
         headers={"Cache-Control": "no-store"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Routes — System (restart / shutdown)
+# ---------------------------------------------------------------------------
+
+@app.route("/api/system/restart", methods=["POST"])
+def system_restart():
+    """Stop all streams, then hot-restart the server process."""
+    manager.stop_all()
+    logger.system("Server restart requested by user")
+    def _restart():
+        time.sleep(0.7)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    threading.Thread(target=_restart, daemon=False).start()
+    return jsonify({"status": "restarting"})
+
+
+@app.route("/api/system/shutdown", methods=["POST"])
+def system_shutdown():
+    """Stop all streams, then exit the server process."""
+    manager.stop_all()
+    logger.system("Server shutdown requested by user")
+    def _shutdown():
+        time.sleep(0.7)
+        os._exit(0)
+    threading.Thread(target=_shutdown, daemon=False).start()
+    return jsonify({"status": "shutting_down"})
 
 
 # ---------------------------------------------------------------------------
