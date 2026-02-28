@@ -26,7 +26,7 @@ from streamer import StreamManager, BITRATE_PRESETS
 from transcoder import VALID_CODECS, VALID_PRESETS, VALID_RESOLUTIONS, VALID_FPS
 from uploader import process_upload, validate_extension
 import logger
-from metrics import collect
+from metrics import collect, read_mem
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -67,6 +67,15 @@ GLOBAL_TC = {
 # ---------------------------------------------------------------------------
 
 _last_metrics: dict = {}
+
+# Seed memory stats immediately at startup so the REST endpoint has something
+# to return before the background thread completes its first 5-second sample.
+try:
+    _m_pct, _m_used, _m_total = read_mem()
+    _last_metrics.update({"cpu": 0.0, "mem": _m_pct,
+                          "mem_used_gb": _m_used, "mem_total_gb": _m_total, "nics": {}})
+except Exception:
+    pass
 
 def _metrics_loop():
     logger.system("Metrics thread started (real OS thread, reads /proc)")

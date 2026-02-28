@@ -430,7 +430,7 @@ input[type=file]{display:none}
         <div class="bar-track"><div class="bar bar-mem" id="mem-bar"></div></div>
       </div>
       <div class="nic-wrap">
-        <select class="nic-sel" id="nic-monitor-sel" onchange="selMonitorNic=this.value;renderNic()" title="NIC to monitor">
+        <select class="nic-sel" id="nic-monitor-sel" onchange="selMonitorNic=this.value;localStorage.setItem('lavacast_nic',this.value);renderNic()" title="NIC to monitor">
           <option>Detecting…</option>
         </select>
         <div class="nic-stats">
@@ -956,7 +956,7 @@ function applyMetrics(d){
   document.getElementById('mem-bar').style.width=Math.min(mem,100)+'%';
   if(d.nics&&Object.keys(d.nics).length){
     const sel=document.getElementById('nic-monitor-sel');
-    if(!nicReady){ sel.innerHTML=''; Object.keys(d.nics).forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;sel.appendChild(o);}); selMonitorNic=sel.value; nicReady=true; }
+    if(!nicReady){ sel.innerHTML=''; Object.keys(d.nics).forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;sel.appendChild(o);}); const saved=localStorage.getItem('lavacast_nic'); if(saved&&d.nics[saved]){sel.value=saved;selMonitorNic=saved;}else{selMonitorNic=sel.value;} nicReady=true; }
     nicCache=d.nics; renderNic();
   }
 }
