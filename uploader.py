@@ -147,7 +147,7 @@ def process_upload(
         if codec == "copy":
             ip, port = manager.add_channel(
                 cid, src_path, filename,
-                pre_transcoded=False, src_path=src_path,
+                pre_transcoded=False, src_path=src_path, codec="copy",
             )
             m = manager.metadata[cid]
             socketio.emit("channel_ready", {
@@ -182,7 +182,7 @@ def process_upload(
             def on_complete(cid, filepath):
                 ip, port = manager.add_channel(
                     cid, filepath, filename,
-                    pre_transcoded=True, src_path=src_path,
+                    pre_transcoded=True, src_path=src_path, codec=codec,
                 )
                 m = manager.metadata[cid]
                 socketio.emit("channel_ready", {

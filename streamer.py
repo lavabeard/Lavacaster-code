@@ -238,6 +238,7 @@ class StreamManager:
         filename: str,
         pre_transcoded: bool = False,
         src_path: str = None,
+        codec: str = "copy",
     ) -> tuple[str, int]:
         """Register or update a channel.  Returns (ip, port)."""
         ip   = self._auto_ip(cid)
@@ -266,6 +267,7 @@ class StreamManager:
             encap          = prev.get("encap", "udp"),
             bitrate        = self.global_bitrate or "",
             loop           = prev.get("loop", True),
+            codec          = codec,
             preset         = prev.get("preset",   "fast"),
             vbitrate       = prev.get("vbitrate",  "6M"),
             abitrate       = prev.get("abitrate",  "192k"),

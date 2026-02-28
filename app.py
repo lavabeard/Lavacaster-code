@@ -239,7 +239,7 @@ def retranscode(cid):
     if codec == "copy":
         manager.add_channel(
             cid, src_path, meta["filename"],
-            pre_transcoded=False, src_path=src_path,
+            pre_transcoded=False, src_path=src_path, codec="copy",
         )
         m = manager.metadata[cid]
         socketio.emit("channel_ready", {
@@ -270,7 +270,7 @@ def retranscode(cid):
     def on_complete(cid, filepath):
         manager.add_channel(
             cid, filepath, meta["filename"],
-            pre_transcoded=True, src_path=src_path,
+            pre_transcoded=True, src_path=src_path, codec=codec,
         )
         m = manager.metadata[cid]
         socketio.emit("channel_ready", {
