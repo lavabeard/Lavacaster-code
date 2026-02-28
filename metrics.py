@@ -6,6 +6,11 @@ Called by the metrics background thread in app.py.
 """
 import time
 
+# Capture the real OS-level sleep before eventlet can monkey-patch time.sleep.
+# metrics.py is intentionally imported before SocketIO(..., async_mode='eventlet')
+# is instantiated in app.py, so this reference stays unpatched.
+_real_sleep = time.sleep
+
 
 def read_cpu_stat():
     with open("/proc/stat") as f:
@@ -60,7 +65,7 @@ def collect(interval=1.0):
     cpu1 = read_cpu_stat()
     net1 = read_net_dev()
     t1   = time.monotonic()
-    time.sleep(interval)
+    _real_sleep(interval)
     cpu2    = read_cpu_stat()
     net2    = read_net_dev()
     t2      = time.monotonic()
