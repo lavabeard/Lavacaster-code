@@ -27,7 +27,13 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;text-decoration:none}
 .logo-orb{width:42px;height:42px;flex-shrink:0;position:relative}
-.logo-orb svg{width:42px;height:42px;filter:drop-shadow(0 0 8px rgba(180,60,255,.5))}
+.logo-orb svg{width:42px;height:42px;filter:drop-shadow(0 0 8px rgba(180,60,255,.5));transition:filter .5s}
+.logo-orb.ws-lost svg{filter:drop-shadow(0 0 8px rgba(255,40,40,.7)) hue-rotate(75deg) saturate(1.6)}
+.ws-chip{font-family:var(--mono);font-size:.38rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  padding:1px 4px;border-radius:2px;margin-top:2px;text-align:center;transition:all .4s}
+.ws-chip.ok{color:#00d46a;border:1px solid rgba(0,212,106,.4)}
+.ws-chip.lost{color:#ff3c3c;border:1px solid rgba(255,60,60,.4);animation:ws-blink .8s ease-in-out infinite}
+@keyframes ws-blink{0%,100%{opacity:1}50%{opacity:.3}}
 .logo-name{font-family:var(--horror);font-size:1.7rem;font-weight:400;letter-spacing:.06em;
   background:linear-gradient(160deg,#cc44ff 0%,#ff6a00 55%,#ff2244 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
@@ -307,7 +313,7 @@ input[type=file]{display:none}
 <header>
   <div class="hdr-top">
     <div class="logo" onclick="window.location.reload()">
-      <div class="logo-orb">
+      <div class="logo-orb" id="logo-orb" title="WebSocket status">
         <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="orbbase" cx="38%" cy="32%" r="65%">
@@ -355,6 +361,7 @@ input[type=file]{display:none}
             <animate attributeName="opacity" values=".9;.3;.9" dur="2s" repeatCount="indefinite"/>
           </circle>
         </svg>
+        <div class="ws-chip ok" id="ws-chip">LIVE</div>
       </div>
       <div>
         <div class="logo-name">LavaCast</div>
@@ -390,15 +397,10 @@ input[type=file]{display:none}
     </div>
   </div>
   <div class="gstrip">
-    <span class="gs-lbl">Bitrate</span>
-    <select class="gs-sel" id="gbr-sel"></select>
-    <button class="btn-sm btn-sm-lava" onclick="applyGbr()">APPLY ALL</button>
-    <div style="width:1px;height:18px;background:var(--border2);margin:0 4px"></div>
     <span class="nic-stream-lbl">Stream NIC</span>
     <select class="nic-stream-sel" id="nic-stream-sel" onchange="applyStreamNic(this.value)" title="FFmpeg output interface">
       <option value="">Auto (default route)</option>
     </select>
-    <span class="gs-hint">Bitrate for copy-mode streams · Transcoded streams always copy at stream time</span>
   </div>
 
   <!-- Global Transcode Settings Strip -->
@@ -518,9 +520,6 @@ input[type=file]{display:none}
         <option value="udp">UDP — MPEG-TS over UDP</option>
         <option value="rtp">RTP — MPEG-TS over RTP</option>
       </select>
-    </div>
-    <div class="fg"><label class="fl">Global Bitrate (copy-mode streams)</label>
-      <select class="fs" id="cfg-gbr"></select>
     </div>
     <div class="ma">
       <button class="btn btn-ghost" onclick="closeMod('m-settings')">Cancel</button>
@@ -707,7 +706,6 @@ async function applyStreamNic(nic){
     state[i]=defState();
     g.insertAdjacentHTML('beforeend',cardHTML(i));
   }
-  populatePresets('gbr-sel',''); populatePresets('cfg-gbr','');
 })();
 
 function cardHTML(i){
@@ -869,9 +867,15 @@ socket.on('channel_ready',d=>{
   document.getElementById(`pb-${d.cid}`).style.width='0%';
   document.getElementById(`pct-${d.cid}`).textContent='';
   document.getElementById(`eta-${d.cid}`).textContent='';
-  // Thumbnail
-  const img=document.getElementById(`img-${d.cid}`);
-  if(d.thumb){ img.src=d.thumb; img.style.display='block'; document.getElementById(`ph-${d.cid}`).style.display='none'; document.getElementById(`tw-${d.cid}`).classList.add('has-thumb'); }
+  // Thumbnail — wait for actual load so a missing file doesn't hide the placeholder
+  if(d.thumb){
+    const img=document.getElementById(`img-${d.cid}`);
+    const ph=document.getElementById(`ph-${d.cid}`);
+    const tw=document.getElementById(`tw-${d.cid}`);
+    img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
+    img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
+    img.src=d.thumb;
+  }
   document.getElementById(`bs-${d.cid}`).disabled=false;
   refreshCard(d.cid); updateStats();
   addActivity('info',`CH${d.cid+1} ready: ${d.filename} [${(d.codec||'copy').toUpperCase()}]`);
@@ -958,14 +962,6 @@ function setRun(i){ document.getElementById(`card-${i}`).classList.add('running'
 function setStop(i){ document.getElementById(`card-${i}`).classList.remove('running'); const b=document.getElementById(`bs-${i}`); b.textContent='▶ Start'; b.className='bcs bcs-start'; }
 function updateStats(){ let live=0,loaded=0; for(let i=0;i<MAX;i++){if(state[i].filename)loaded++;if(state[i].running)live++;} document.getElementById('s-live').textContent=live; document.getElementById('s-loaded').textContent=loaded; }
 
-async function applyGbr(){
-  const br=document.getElementById('gbr-sel').value;
-  const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bitrate:br})});
-  const d=await r.json(); if(d.error){toast(d.error,true);return;}
-  for(let i=0;i<MAX;i++) if(state[i].filename&&state[i].codec==='copy'){ state[i].bitrate=br; document.getElementById(`pbr-${i}`).textContent=br||'PASS'; }
-  toast(br?`Global bitrate → ${br}`:'Bitrate → Passthrough');
-  addActivity('info',br?`Global bitrate set to ${br}`:'Global bitrate cleared');
-}
 
 function toggleCodecOpts(){
   const v=document.getElementById('e-codec').value;
@@ -1038,17 +1034,15 @@ async function doRetranscode(){
 }
 
 function openMod(id){
-  if(id==='m-settings') populatePresets('cfg-gbr',document.getElementById('gbr-sel').value);
   document.getElementById(id).classList.add('open');
 }
 function closeMod(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.mbg').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
 async function saveSettings(){
-  const body={media_path:document.getElementById('cfg-path').value.trim(),bitrate:document.getElementById('cfg-gbr').value};
+  const body={media_path:document.getElementById('cfg-path').value.trim()};
   const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json(); if(d.error){toast(d.error,true);return;}
-  for(let o of document.getElementById('gbr-sel').options) o.selected=(o.value===body.bitrate);
   closeMod('m-settings'); toast('Settings saved.');
 }
 
@@ -1106,9 +1100,11 @@ function syncStatus(){
       refreshCard(i);
       document.getElementById(`bs-${i}`).disabled=false;
       const img=document.getElementById(`img-${i}`);
-      img.src=m.thumb+'?t='+Date.now(); img.style.display='block';
-      document.getElementById(`ph-${i}`).style.display='none';
-      document.getElementById(`tw-${i}`).classList.add('has-thumb');
+      const ph=document.getElementById(`ph-${i}`);
+      const tw=document.getElementById(`tw-${i}`);
+      img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
+      img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
+      img.src=m.thumb+'?t='+Date.now();
       if(m.running) setRun(i); else setStop(i);
     }
     updateStats();
@@ -1118,9 +1114,20 @@ function syncStatus(){
 // On socket reconnect, re-sync channel states to recover any missed channel_ready events
 socket.io.on('reconnect',()=>{ syncStatus(); addActivity('system','Socket reconnected — syncing state'); });
 
+// WebSocket connection indicator — green orb = live, red orb = disconnected
+function _wsOk(){
+  document.getElementById('logo-orb').classList.remove('ws-lost');
+  const c=document.getElementById('ws-chip'); c.textContent='LIVE'; c.className='ws-chip ok';
+}
+function _wsLost(){
+  document.getElementById('logo-orb').classList.add('ws-lost');
+  const c=document.getElementById('ws-chip'); c.textContent='OFFLINE'; c.className='ws-chip lost';
+}
+socket.on('connect',    _wsOk);
+socket.on('disconnect', _wsLost);
+
 fetch('/api/status').then(r=>r.json()).then(d=>{
   if(d.bitrate_presets) presets=d.bitrate_presets;
-  populatePresets('gbr-sel',d.global_bitrate||''); populatePresets('cfg-gbr',d.global_bitrate||'');
   if(d.nics&&d.nics.length) populateNicDropdowns(d.nics,d.selected_nic||'');
   for(const[cs,m] of Object.entries(d.channels||{})){
     const i=parseInt(cs);
@@ -1130,9 +1137,11 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
     if(m.filename){
       document.getElementById(`bs-${i}`).disabled=false;
       const img=document.getElementById(`img-${i}`);
-      img.src=m.thumb+'?t='+Date.now(); img.style.display='block';
-      document.getElementById(`ph-${i}`).style.display='none';
-      document.getElementById(`tw-${i}`).classList.add('has-thumb');
+      const ph=document.getElementById(`ph-${i}`);
+      const tw=document.getElementById(`tw-${i}`);
+      img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
+      img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
+      img.src=m.thumb+'?t='+Date.now();
     }
     if(m.running) setRun(i);
   }

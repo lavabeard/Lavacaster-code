@@ -84,7 +84,7 @@ def generate_thumbnail(filepath: str, cid: int, thumb_dir: str):
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                timeout=15,
+                timeout=45,
             )
         logger.info(f"Thumbnail ready CH{cid + 1:02d}")
     except Exception as e:
