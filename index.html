@@ -26,9 +26,9 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .hdr-top{display:flex;align-items:center;gap:12px;padding:0 16px;height:60px;flex-wrap:wrap}
 
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;text-decoration:none}
-.logo-orb{width:42px;height:42px;flex-shrink:0;position:relative}
-.logo-orb svg{width:42px;height:42px;filter:drop-shadow(0 0 8px rgba(180,60,255,.5));transition:filter .5s}
-.logo-orb.ws-lost svg{filter:drop-shadow(0 0 8px rgba(255,40,40,.7)) hue-rotate(75deg) saturate(1.6)}
+.logo-orb{width:72px;flex-shrink:0;position:relative;display:flex;flex-direction:column;align-items:center}
+.logo-orb svg{width:72px;height:auto;filter:drop-shadow(0 0 14px rgba(180,60,255,.7));transition:filter .5s;overflow:visible}
+.logo-orb.ws-lost svg{filter:drop-shadow(0 0 14px rgba(255,40,40,.9)) hue-rotate(75deg) saturate(1.6)}
 .ws-chip{font-family:var(--mono);font-size:.38rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   padding:1px 4px;border-radius:2px;margin-top:2px;text-align:center;transition:all .4s}
 .ws-chip.ok{color:#00d46a;border:1px solid rgba(0,212,106,.4)}
@@ -314,7 +314,7 @@ input[type=file]{display:none}
   <div class="hdr-top">
     <div class="logo" onclick="window.location.reload()">
       <div class="logo-orb" id="logo-orb" title="WebSocket status">
-        <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 100 118" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="orbbase" cx="38%" cy="32%" r="65%">
               <stop offset="0%" stop-color="#e8aaff"/><stop offset="30%" stop-color="#9b30d0"/>
@@ -335,31 +335,69 @@ input[type=file]{display:none}
               <stop offset="50%" stop-color="#cc2200" stop-opacity=".5"/>
               <stop offset="100%" stop-color="#000" stop-opacity="0"/>
             </radialGradient>
-            <filter id="orbblur"><feGaussianBlur stdDeviation="1.2"/></filter>
-            <filter id="crackshadow"><feDropShadow dx="0" dy="0" stdDeviation=".6" flood-color="#ff6a00" flood-opacity=".9"/></filter>
+            <filter id="orbblur"><feGaussianBlur stdDeviation="2"/></filter>
+            <filter id="crackshadow"><feDropShadow dx="0" dy="0" stdDeviation="1" flood-color="#ff6a00" flood-opacity=".9"/></filter>
+            <filter id="handglow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="1.6" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
           </defs>
-          <circle cx="21" cy="21" r="20" fill="none" stroke="rgba(160,40,220,.25)" stroke-width="1.5">
-            <animate attributeName="r" values="19;21;19" dur="3s" repeatCount="indefinite"/>
+          <!-- ORB — centre (50,40) r=19 -->
+          <circle cx="50" cy="40" r="21" fill="none" stroke="rgba(160,40,220,.25)" stroke-width="1.5">
+            <animate attributeName="r" values="20;22;20" dur="3s" repeatCount="indefinite"/>
             <animate attributeName="stroke-opacity" values=".25;.05;.25" dur="3s" repeatCount="indefinite"/>
           </circle>
-          <circle cx="21" cy="21" r="17" fill="url(#orbbase)"/>
-          <ellipse cx="21" cy="21" rx="15" ry="6" fill="none" stroke="rgba(180,80,255,.18)" stroke-width="2.5" transform="rotate(-25 21 21)"/>
-          <ellipse cx="21" cy="21" rx="12" ry="4" fill="none" stroke="rgba(220,120,255,.12)" stroke-width="1.5" transform="rotate(20 21 21)"/>
-          <ellipse cx="21" cy="21" rx="9" ry="3" fill="none" stroke="rgba(255,106,0,.15)" stroke-width="1" transform="rotate(-50 21 21)"/>
-          <circle cx="21" cy="22" r="5" fill="url(#orbcore)" opacity=".7" filter="url(#orbblur)"/>
+          <circle cx="50" cy="40" r="19" fill="url(#orbbase)"/>
+          <ellipse cx="50" cy="40" rx="17" ry="7" fill="none" stroke="rgba(180,80,255,.18)" stroke-width="2.5" transform="rotate(-25 50 40)"/>
+          <ellipse cx="50" cy="40" rx="13" ry="5" fill="none" stroke="rgba(220,120,255,.12)" stroke-width="1.5" transform="rotate(20 50 40)"/>
+          <ellipse cx="50" cy="40" rx="10" ry="3.5" fill="none" stroke="rgba(255,106,0,.15)" stroke-width="1" transform="rotate(-50 50 40)"/>
+          <circle cx="50" cy="41" r="6" fill="url(#orbcore)" opacity=".7" filter="url(#orbblur)"/>
           <g filter="url(#crackshadow)" stroke="#ff6a00" stroke-linecap="round">
-            <path d="M21 19 L19 14 L20 11" stroke-width=".9" opacity=".85"/>
-            <path d="M23 20 L27 16 L29 13" stroke-width=".7" opacity=".7"/>
-            <path d="M22 23 L25 28 L24 31" stroke-width=".8" opacity=".8"/>
-            <path d="M19 22 L15 26 L13 30" stroke-width=".7" opacity=".65"/>
+            <path d="M50 38 L47 30 L48 26" stroke-width="1" opacity=".85"/>
+            <path d="M54 39 L61 33 L65 28" stroke-width=".9" opacity=".7"/>
+            <path d="M52 44 L57 52 L55 57" stroke-width="1" opacity=".8"/>
+            <path d="M46 42 L40 49 L37 54" stroke-width=".9" opacity=".65"/>
           </g>
-          <circle cx="15" cy="14" r="5" fill="url(#orbhot)" opacity=".85"/>
-          <circle cx="21" cy="21" r="17" fill="none" stroke="rgba(220,160,255,.3)" stroke-width=".8"/>
-          <circle cx="21" cy="21" r="19" fill="url(#orbglow)"/>
-          <circle cx="21" cy="21" r="2.5" fill="#ff9a3c" opacity=".9">
-            <animate attributeName="r" values="2;3.5;2" dur="2s" repeatCount="indefinite"/>
+          <circle cx="37" cy="28" r="7" fill="url(#orbhot)" opacity=".85"/>
+          <circle cx="50" cy="40" r="19" fill="none" stroke="rgba(220,160,255,.3)" stroke-width=".8"/>
+          <circle cx="50" cy="40" r="21" fill="url(#orbglow)"/>
+          <circle cx="50" cy="40" r="3" fill="#ff9a3c" opacity=".9">
+            <animate attributeName="r" values="2.5;4;2.5" dur="2s" repeatCount="indefinite"/>
             <animate attributeName="opacity" values=".9;.3;.9" dur="2s" repeatCount="indefinite"/>
           </circle>
+          <!-- LEFT HAND — fortune-teller cradling pose -->
+          <g filter="url(#handglow)">
+            <!-- Palm + 4 fingers as one continuous silhouette -->
+            <path d="M 4,115 C 3,105 3,95 5,85 C 6,79 7,73 8,69 L 8,60 C 8,56 8,52 9,50 C 9,48 10,47 11,47 C 12,47 13,48 13,50 C 13,52 13,56 13,60 L 14,60 C 14,55 14,51 15,49 C 15,47 16,46 17,46 C 18,46 19,47 19,49 C 19,51 19,55 20,60 L 21,60 C 21,55 21,50 22,48 C 22,46 23,45 24,45 C 25,45 26,46 26,48 C 26,50 26,55 27,60 L 28,60 C 28,56 28,52 29,50 C 29,48 30,47 31,47 C 32,47 33,48 33,50 C 33,53 33,57 33,61 C 34,65 36,70 36,75 C 34,83 30,93 24,103 C 17,111 10,114 4,115 Z" fill="#2a0548" stroke="rgba(190,80,255,0.85)" stroke-width="0.9" stroke-linejoin="round"/>
+            <!-- Thumb -->
+            <path d="M 8,69 C 6,63 5,57 6,52 C 7,48 9,47 11,49 C 13,51 13,58 11,65 Z" fill="#2a0548" stroke="rgba(190,80,255,0.85)" stroke-width="0.9"/>
+            <!-- Fingernail glints -->
+            <line x1="11" y1="48" x2="11" y2="51" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="17" y1="47" x2="17" y2="50" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="24" y1="46" x2="24" y2="49" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="31" y1="48" x2="31" y2="51" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+          </g>
+          <!-- RIGHT HAND — mirror of left -->
+          <g filter="url(#handglow)" transform="translate(100,0) scale(-1,1)">
+            <path d="M 4,115 C 3,105 3,95 5,85 C 6,79 7,73 8,69 L 8,60 C 8,56 8,52 9,50 C 9,48 10,47 11,47 C 12,47 13,48 13,50 C 13,52 13,56 13,60 L 14,60 C 14,55 14,51 15,49 C 15,47 16,46 17,46 C 18,46 19,47 19,49 C 19,51 19,55 20,60 L 21,60 C 21,55 21,50 22,48 C 22,46 23,47 24,45 C 25,45 26,46 26,48 C 26,50 26,55 27,60 L 28,60 C 28,56 28,52 29,50 C 29,48 30,47 31,47 C 32,47 33,48 33,50 C 33,53 33,57 33,61 C 34,65 36,70 36,75 C 34,83 30,93 24,103 C 17,111 10,114 4,115 Z" fill="#2a0548" stroke="rgba(190,80,255,0.85)" stroke-width="0.9" stroke-linejoin="round"/>
+            <path d="M 8,69 C 6,63 5,57 6,52 C 7,48 9,47 11,49 C 13,51 13,58 11,65 Z" fill="#2a0548" stroke="rgba(190,80,255,0.85)" stroke-width="0.9"/>
+            <line x1="11" y1="48" x2="11" y2="51" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="17" y1="47" x2="17" y2="50" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="24" y1="46" x2="24" y2="49" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="31" y1="48" x2="31" y2="51" stroke="rgba(230,150,255,0.55)" stroke-width="0.8" stroke-linecap="round"/>
+          </g>
+          <!-- Mystic sparkles -->
+          <g fill="rgba(255,210,80,0.9)">
+            <path d="M 7,32 L 8.5,28 L 10,32 L 14,33.5 L 10,35 L 8.5,39 L 7,35 L 3,33.5 Z" opacity="0.75">
+              <animate attributeName="opacity" values="0.75;0.15;0.75" dur="2.8s" repeatCount="indefinite"/>
+            </path>
+            <path d="M 89,26 L 90,23 L 91,26 L 94,27.5 L 91,29 L 90,32 L 89,29 L 86,27.5 Z" opacity="0.6">
+              <animate attributeName="opacity" values="0.6;0.1;0.6" dur="3.5s" repeatCount="indefinite"/>
+            </path>
+            <path d="M 18,12 L 19,9 L 20,12 L 23,13.5 L 20,15 L 19,18 L 18,15 L 15,13.5 Z" opacity="0.5">
+              <animate attributeName="opacity" values="0.5;0.08;0.5" dur="2.1s" repeatCount="indefinite"/>
+            </path>
+          </g>
         </svg>
         <div class="ws-chip ok" id="ws-chip">LIVE</div>
       </div>
