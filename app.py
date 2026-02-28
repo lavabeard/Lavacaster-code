@@ -16,6 +16,7 @@ Module layout
 
 import os
 import threading
+import time
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO
@@ -229,7 +230,7 @@ def retranscode(cid):
             "bitrate":  meta.get("bitrate", ""),
             "loop":     meta.get("loop", True),
             "codec":    "copy",
-            "thumb":    meta.get("thumb", ""),
+            "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
         })
         if was_running:
             manager.start(cid, on_stop=_on_stop)
@@ -257,7 +258,7 @@ def retranscode(cid):
             "bitrate":  m.get("bitrate", ""),
             "loop":     m.get("loop", True),
             "codec":    codec,
-            "thumb":    m.get("thumb", ""),
+            "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
         })
         if was_running:
             manager.start(cid, on_stop=_on_stop)

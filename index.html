@@ -1087,6 +1087,37 @@ function toast(msg,errOrType=false){
   clearTimeout(tt); tt=setTimeout(()=>el.className='',3800);
 }
 
+// Sync channel states from /api/status — called on page load and on socket reconnect
+// to recover any channel_ready events that were missed during a disconnection.
+function syncStatus(){
+  fetch('/api/status').then(r=>r.json()).then(d=>{
+    for(const[cs,m] of Object.entries(d.channels||{})){
+      const i=parseInt(cs);
+      if(!m.filename) continue;
+      // Channel is ready on the server — clear any stuck transcoding/uploading overlay
+      state[i].transcoding=false;
+      document.getElementById(`tw-${i}`).classList.remove('uploading');
+      document.getElementById(`card-${i}`).classList.remove('transcoding');
+      document.getElementById(`pb-${i}`).style.width='0%';
+      document.getElementById(`pct-${i}`).textContent='';
+      document.getElementById(`eta-${i}`).textContent='';
+      Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
+        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+      refreshCard(i);
+      document.getElementById(`bs-${i}`).disabled=false;
+      const img=document.getElementById(`img-${i}`);
+      img.src=m.thumb+'?t='+Date.now(); img.style.display='block';
+      document.getElementById(`ph-${i}`).style.display='none';
+      document.getElementById(`tw-${i}`).classList.add('has-thumb');
+      if(m.running) setRun(i); else setStop(i);
+    }
+    updateStats();
+  });
+}
+
+// On socket reconnect, re-sync channel states to recover any missed channel_ready events
+socket.io.on('reconnect',()=>{ syncStatus(); addActivity('system','Socket reconnected — syncing state'); });
+
 fetch('/api/status').then(r=>r.json()).then(d=>{
   if(d.bitrate_presets) presets=d.bitrate_presets;
   populatePresets('gbr-sel',d.global_bitrate||''); populatePresets('cfg-gbr',d.global_bitrate||'');
