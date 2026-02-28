@@ -27,10 +27,11 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;text-decoration:none}
 .logo-orb{height:56px;flex-shrink:0;position:relative}
-.logo-orb svg{height:56px;width:auto;filter:drop-shadow(0 0 9px rgba(30,200,100,.55));transition:filter .65s}
-.logo-orb.ws-lost svg{filter:drop-shadow(0 0 12px rgba(255,40,60,.8)) drop-shadow(0 0 24px rgba(200,0,30,.4))}
-#ft-planet-grp{transition:filter .65s ease}
-.logo-orb.ws-lost #ft-planet-grp{filter:hue-rotate(240deg) saturate(1.4) brightness(1.1)}
+.ft-ball-wrap{position:relative;display:inline-block;height:100%}
+.ft-ball-img{height:56px;width:auto;display:block;filter:drop-shadow(0 0 9px rgba(30,200,100,.55));transition:filter .65s}
+.logo-orb.ws-lost .ft-ball-img{filter:drop-shadow(0 0 12px rgba(255,40,60,.8)) drop-shadow(0 0 24px rgba(200,0,30,.4))}
+.ft-planet-glow{position:absolute;width:36%;aspect-ratio:1;top:39%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,255,110,.65) 0%,rgba(0,200,80,.3) 45%,transparent 70%);mix-blend-mode:screen;border-radius:50%;transition:background .65s;pointer-events:none}
+.logo-orb.ws-lost .ft-planet-glow{background:radial-gradient(circle,rgba(255,50,50,.72) 0%,rgba(220,30,30,.36) 45%,transparent 70%)}
 .ws-chip{font-family:var(--mono);font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   padding:2px 8px;border-radius:3px;margin-top:3px;text-align:center;transition:all .4s}
 .ws-chip.ok{color:#00d46a;border:1px solid rgba(0,212,106,.4)}
@@ -316,7 +317,11 @@ input[type=file]{display:none}
   <div class="hdr-top">
     <div class="logo" onclick="window.location.reload()">
       <div class="logo-orb" id="logo-orb" title="WebSocket status">
-        <!-- Fortune-teller crystal ball: planet group (#ft-planet-grp) shifts green→red via CSS hue-rotate on disconnect -->
+        <div class="ft-ball-wrap">
+          <img src="fortune teller.png" class="ft-ball-img" alt="Fortune teller ball">
+          <div class="ft-planet-glow"></div>
+        </div>
+        <!-- SVG REMOVED — kept below as dead comment for reference only
         <svg id="ft-ball" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="fti" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#050e07"/><stop offset="70%" stop-color="#020704"/><stop offset="100%" stop-color="#010402"/></radialGradient>
@@ -410,7 +415,7 @@ input[type=file]{display:none}
           <!-- Specular highlights (neutral) -->
           <ellipse cx="87" cy="36" rx="7" ry="4.5" fill="rgba(255,255,255,.07)" transform="rotate(-22 87 36)"/>
           <circle  cx="80" cy="32" r="2" fill="rgba(255,255,255,.05)"/>
-        </svg>
+        </svg> -->
         <div class="ws-chip ok" id="ws-chip">LIVE</div>
       </div>
       <div>
