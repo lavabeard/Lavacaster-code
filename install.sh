@@ -50,16 +50,34 @@ sudo apt install -y git python3 python3-pip python3-venv ffmpeg -qq
 log "git, python3, ffmpeg ready."
 
 # ---------------------------------------------------------------------------
-header "STEP 3: Clone / Update Repository"
-if [ -d "$INSTALL_DIR/.git" ]; then
-  warn "Repo already exists at $INSTALL_DIR — pulling latest changes."
-  git -C "$INSTALL_DIR" fetch origin main
-  git -C "$INSTALL_DIR" reset --hard origin/main
-  log "Repository updated."
-elif [ -d "$INSTALL_DIR" ] && [ -f "$APP_DIR/app.py" ]; then
-  warn "$INSTALL_DIR exists but is not a git repo — using as-is."
+header "STEP 3: Install / Update"
+DATE=$(date +%Y-%m-%d)
+BACKUP_DIR="$HOME/lavacast40-old-$DATE"
+if [ -d "$BACKUP_DIR" ]; then
+  BACKUP_DIR="${BACKUP_DIR}-$(date +%H%M%S)"
+fi
+
+if [ -d "$INSTALL_DIR" ]; then
+  warn "Existing install found — backing up to $(basename "$BACKUP_DIR")"
+  # Stop the service so nothing is actively writing
+  sudo systemctl stop "${SERVICE_NAME}.service" 2>/dev/null || true
+  # Move media out first so videos stay in lavacast40 after the update
+  if [ -d "$INSTALL_DIR/media" ]; then
+    mv "$INSTALL_DIR/media" /tmp/lavacast40_media_save
+    log "Media saved temporarily (will be restored after clone)"
+  fi
+  # Rotate old install to dated backup folder
+  mv "$INSTALL_DIR" "$BACKUP_DIR"
+  log "Old install → $BACKUP_DIR"
+  # Fresh clone
+  git clone "$REPO_URL" "$INSTALL_DIR"
+  # Put media back so videos stay at the real lavacast40 path
+  if [ -d /tmp/lavacast40_media_save ]; then
+    mv /tmp/lavacast40_media_save "$INSTALL_DIR/media"
+    log "Media restored → $INSTALL_DIR/media/"
+  fi
+  log "Code updated from repository."
 else
-  mkdir -p "$INSTALL_DIR"
   git clone "$REPO_URL" "$INSTALL_DIR"
   log "Repository cloned to $INSTALL_DIR"
 fi
