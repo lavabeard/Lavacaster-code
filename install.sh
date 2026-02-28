@@ -27,8 +27,8 @@ header() {
 # Config
 # ---------------------------------------------------------------------------
 REPO_URL="https://github.com/lavabeard/Lavacaster-code.git"
-INSTALL_DIR="${LAVACAST_DIR:-/opt/lavacast40}"
-APP_DIR="$INSTALL_DIR/lavacaster"
+INSTALL_DIR="${LAVACAST_DIR:-$HOME/lavacast40}"
+APP_DIR="$INSTALL_DIR"
 VENV_DIR="$INSTALL_DIR/venv"
 LOG_DIR="$INSTALL_DIR/logs"
 LOG_FILE="$LOG_DIR/lavacast40.log"
@@ -59,8 +59,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
 elif [ -d "$INSTALL_DIR" ] && [ -f "$APP_DIR/app.py" ]; then
   warn "$INSTALL_DIR exists but is not a git repo — using as-is."
 else
-  sudo mkdir -p "$(dirname "$INSTALL_DIR")"
-  sudo chown "$CURRENT_USER":"$CURRENT_USER" "$(dirname "$INSTALL_DIR")"
+  mkdir -p "$INSTALL_DIR"
   git clone "$REPO_URL" "$INSTALL_DIR"
   log "Repository cloned to $INSTALL_DIR"
 fi
@@ -129,8 +128,10 @@ LOCAL_IP=$(hostname -I | awk '{print $1}')
 header "LavaCast 40 v8 — Installation Complete"
 echo ""
 echo -e "  ${GREEN}Install dir:${NC}     $INSTALL_DIR"
+echo -e "  ${GREEN}Python files:${NC}    $INSTALL_DIR/*.py"
+echo -e "  ${GREEN}Logs:${NC}            $LOG_DIR/"
+echo -e "  ${GREEN}Media:${NC}           $INSTALL_DIR/media/"
 echo -e "  ${GREEN}Web GUI:${NC}         http://$LOCAL_IP:5000"
-echo -e "  ${GREEN}Logs:${NC}            $LOG_FILE"
 echo -e "  ${GREEN}Start service:${NC}   sudo systemctl start $SERVICE_NAME"
 echo ""
 read -rp "$(echo -e "${ORANGE}Start now? [y/N]: ${NC}")" go
