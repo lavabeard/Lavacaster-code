@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LavaCast 40 v8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Rubik:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<style>
+:root{
+  --bg:#08080a;--surface:#0f0e0d;--card:#131210;--border:#2a2218;--border2:#3a3020;
+  --lava:#ff6a00;--lava2:#ff9a3c;--lava-dim:rgba(255,106,0,.12);
+  --ember:#ffcc44;--blue:#4488ff;--red:#ff2244;--green:#33cc66;--purple:#b04aff;
+  --text:#e8e0d8;--muted:#5a5040;
+  --horror:'Creepster',cursive;--mono:'Share Tech Mono',monospace;--sans:'Rubik',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scrollbar-color:var(--border2) var(--surface);scrollbar-width:thin}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;
+  background-image:radial-gradient(ellipse at 20% 0%,rgba(255,80,0,.04) 0%,transparent 55%),
+                   radial-gradient(ellipse at 80% 100%,rgba(255,60,0,.03) 0%,transparent 50%)}
+
+header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
+  backdrop-filter:blur(20px);border-bottom:1px solid var(--border2)}
+.hdr-top{display:flex;align-items:center;gap:12px;padding:0 16px;height:60px;flex-wrap:wrap}
+
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;text-decoration:none}
+.logo-orb{width:42px;height:42px;flex-shrink:0;position:relative}
+.logo-orb svg{width:42px;height:42px;filter:drop-shadow(0 0 8px rgba(180,60,255,.5))}
+.logo-name{font-family:var(--horror);font-size:1.7rem;font-weight:400;letter-spacing:.06em;
+  background:linear-gradient(160deg,#cc44ff 0%,#ff6a00 55%,#ff2244 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 10px rgba(200,60,255,.35));line-height:1;margin-bottom:1px}
+.logo-sub{font-family:var(--mono);font-size:.44rem;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+
+.meters{display:flex;align-items:center;gap:14px;flex:1;padding:0 8px;flex-wrap:wrap}
+.meter{display:flex;flex-direction:column;gap:3px;min-width:82px}
+.m-hd{display:flex;justify-content:space-between;align-items:baseline}
+.m-lbl{font-family:var(--mono);font-size:.52rem;font-weight:700;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.m-val{font-family:var(--mono);font-size:.74rem;font-weight:700;color:var(--text)}
+.m-val .u{font-size:.48rem;color:var(--muted);font-weight:400}
+.bar-track{height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.bar{height:100%;border-radius:2px;transition:width .8s ease;width:0%}
+.bar-cpu{background:linear-gradient(90deg,#ff3300,var(--lava),var(--lava2))}
+.bar-mem{background:linear-gradient(90deg,#aa5500,var(--ember))}
+.bar.hot{animation:hpulse 1s ease-in-out infinite}
+@keyframes hpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
+
+.nic-wrap{display:flex;align-items:center;gap:8px;border-left:1px solid var(--border2);padding-left:12px;flex-shrink:0}
+.nic-sel{background:var(--surface);border:1px solid var(--border2);color:var(--text);
+  font-family:var(--mono);font-size:.58rem;font-weight:600;padding:4px 7px;border-radius:3px;cursor:pointer;outline:none}
+.nic-sel:focus{border-color:var(--lava)}
+.nic-stats{display:flex;gap:10px}
+.nic-s{display:flex;flex-direction:column;gap:1px}
+.nic-lbl{font-family:var(--mono);font-size:.44rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.nic-val{font-family:var(--mono);font-size:.74rem;font-weight:700}
+.nic-val.tx{color:var(--lava2)}.nic-val.rx{color:var(--blue)}
+
+.hdr-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
+.hdr-badge{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.08em;color:var(--muted);display:flex;gap:9px}
+.hdr-badge b{color:var(--text)}
+.btn{font-family:var(--mono);font-size:.6rem;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;padding:7px 12px;border:none;border-radius:3px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.btn-lava{background:linear-gradient(135deg,var(--lava),var(--lava2));color:#000}
+.btn-stop{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:7px 10px}
+.btn-amber{background:var(--ember);color:#000}
+.btn:hover{filter:brightness(1.15)}.btn:active{transform:scale(.97)}
+
+.gstrip{display:flex;align-items:center;gap:10px;padding:5px 16px;
+  background:rgba(255,106,0,.04);border-bottom:1px solid rgba(255,106,0,.1);flex-wrap:wrap}
+.gs-lbl{font-family:var(--mono);font-size:.52rem;font-weight:700;letter-spacing:.14em;color:var(--lava);text-transform:uppercase;flex-shrink:0}
+.gs-sel{background:var(--surface);border:1px solid var(--border2);color:var(--text);
+  font-family:var(--mono);font-size:.64rem;padding:3px 7px;border-radius:3px;outline:none;cursor:pointer;min-width:170px}
+.gs-sel:focus{border-color:var(--lava)}
+.gs-hint{font-family:var(--mono);font-size:.48rem;color:var(--muted);flex:1}
+.nic-stream-lbl{font-family:var(--mono);font-size:.52rem;font-weight:700;letter-spacing:.14em;color:var(--blue);text-transform:uppercase;flex-shrink:0}
+.nic-stream-sel{background:var(--surface);border:1px solid rgba(68,136,255,.3);
+  color:var(--text);font-family:var(--mono);font-size:.64rem;padding:3px 7px;border-radius:3px;outline:none;cursor:pointer;min-width:150px}
+.nic-stream-sel:focus{border-color:var(--blue)}
+.btn-sm{font-family:var(--mono);font-size:.56rem;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;transition:all .15s;border:none}
+.btn-sm-lava{background:var(--lava-dim);border:1px solid rgba(255,106,0,.3);color:var(--lava2)}
+.btn-sm-lava:hover{background:rgba(255,106,0,.22)}
+.btn-sm-purple{background:rgba(176,74,255,.12);border:1px solid rgba(176,74,255,.3);color:var(--purple)}
+.btn-sm-purple:hover{background:rgba(176,74,255,.24)}
+
+/* Global Transcode Strip */
+.tc-strip{display:flex;align-items:center;gap:8px;padding:4px 16px;
+  background:rgba(176,74,255,.04);border-bottom:1px solid rgba(176,74,255,.1);flex-wrap:wrap}
+.tc-strip-lbl{font-family:var(--mono);font-size:.52rem;font-weight:700;letter-spacing:.14em;
+  color:var(--purple);text-transform:uppercase;flex-shrink:0}
+.tc-sep{width:1px;height:14px;background:rgba(176,74,255,.2);flex-shrink:0}
+.tc-sel{background:var(--surface);border:1px solid rgba(176,74,255,.25);color:var(--text);
+  font-family:var(--mono);font-size:.6rem;padding:3px 7px;border-radius:3px;outline:none;cursor:pointer}
+.tc-sel:focus{border-color:var(--purple)}
+.tc-sel:disabled{opacity:.35;cursor:default}
+.tc-br-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.tc-br-lbl{font-family:var(--mono);font-size:.5rem;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.tc-br-val{font-family:var(--mono);font-size:.64rem;font-weight:800;color:var(--purple);min-width:52px;text-align:right}
+input[type=range].tc-slider{-webkit-appearance:none;appearance:none;height:4px;
+  background:rgba(176,74,255,.25);border-radius:2px;outline:none;width:110px;cursor:pointer}
+input[type=range].tc-slider::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:var(--purple);cursor:pointer;box-shadow:0 0 5px rgba(176,74,255,.4)}
+input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
+.tc-hint{font-family:var(--mono);font-size:.48rem;color:var(--green);transition:opacity .3s;opacity:0}
+.tc-hint.show{opacity:1}
+
+/* Card overlay ETA */
+.up-eta{font-family:var(--mono);font-size:.5rem;color:var(--muted);min-height:.75em;letter-spacing:.06em}
+
+.tabs{display:flex;gap:0;background:rgba(8,8,10,.97);border-bottom:1px solid var(--border2)}
+.tab{font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;padding:9px 18px;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--lava2);border-bottom-color:var(--lava)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+#page-channels{padding:12px 16px 40px}
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sec-lbl{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);flex-shrink:0}
+.sec-line{flex:1;height:1px;background:var(--border)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:9px}
+
+/* Card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:5px;overflow:hidden;transition:border-color .25s,box-shadow .25s}
+.card:hover{border-color:var(--border2)}
+.card.running{border-color:rgba(255,106,0,.5);box-shadow:0 0 14px rgba(255,90,0,.1)}
+.card.transcoding{border-color:rgba(176,74,255,.5);box-shadow:0 0 14px rgba(176,74,255,.1)}
+
+/* Thumbnail */
+.tw{position:relative;width:100%;aspect-ratio:16/9;background:#0a0806;overflow:hidden;cursor:pointer}
+.tw img{width:100%;height:100%;object-fit:cover;display:none;transition:opacity .3s}
+.tw-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:5px;color:var(--muted);font-family:var(--mono);
+  font-size:.5rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;pointer-events:none}
+.tw-ph svg{opacity:.2}
+
+/* Upload / transcode overlay */
+.up-ov{position:absolute;inset:0;background:rgba(8,8,10,.93);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.uploading .up-ov,.transcoding .up-ov{opacity:1;pointer-events:all}
+.up-lbl{font-family:var(--mono);font-size:.54rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.up-lbl.phase-upload{color:var(--lava2)}
+.up-lbl.phase-tc{color:var(--purple)}
+.pb-track{width:74%;height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.pb{height:100%;width:0%;transition:width .08s linear;border-radius:2px}
+.pb-upload{background:linear-gradient(90deg,var(--lava),var(--lava2))}
+.pb-tc{background:linear-gradient(90deg,var(--purple),#ff6ec7)}
+.pb-pct{font-family:var(--mono);font-size:.6rem;color:var(--text)}
+
+.hover-load{position:absolute;bottom:0;left:0;right:0;padding:14px 8px 5px;
+  background:linear-gradient(transparent,rgba(0,0,0,.82));opacity:0;transition:opacity .18s;display:flex;justify-content:center}
+.tw:hover .hover-load{opacity:1}
+.mini-btn{font-family:var(--mono);font-size:.5rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;background:rgba(255,106,0,.15);border:1px solid rgba(255,106,0,.4);
+  color:var(--lava2);padding:3px 8px;border-radius:2px;cursor:pointer;backdrop-filter:blur(6px)}
+.mini-btn:hover{background:rgba(255,106,0,.28)}
+
+.thumb-refresh{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);width:22px;height:22px;
+  border-radius:3px;font-size:.7rem;display:none;align-items:center;justify-content:center;
+  cursor:pointer;backdrop-filter:blur(4px);transition:all .15s;z-index:2}
+.thumb-refresh:hover{background:rgba(255,106,0,.5);border-color:var(--lava)}
+.has-thumb .thumb-refresh{display:flex}
+
+.live-badge{position:absolute;top:5px;left:5px;background:var(--lava);color:#000;
+  font-family:var(--mono);font-size:.44rem;font-weight:800;letter-spacing:.1em;
+  padding:2px 5px;border-radius:2px;display:none;text-transform:uppercase}
+.running .live-badge{display:block;animation:lpulse 1.6s ease-in-out infinite}
+@keyframes lpulse{0%,100%{opacity:1;box-shadow:0 0 5px var(--lava)}50%{opacity:.4;box-shadow:none}}
+
+.tc-badge{position:absolute;top:5px;left:5px;background:var(--purple);color:#fff;
+  font-family:var(--mono);font-size:.44rem;font-weight:800;letter-spacing:.1em;
+  padding:2px 5px;border-radius:2px;display:none;text-transform:uppercase}
+.transcoding .tc-badge{display:block;animation:tcpulse 1s ease-in-out infinite}
+@keyframes tcpulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+input[type=file]{display:none}
+
+.cb{padding:7px 9px 9px}
+.ctop{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.chid{font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.1em;color:var(--muted)}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--border2);transition:background .3s,box-shadow .3s}
+.running .sdot{background:var(--lava);box-shadow:0 0 8px var(--lava)}
+.transcoding .sdot{background:var(--purple);box-shadow:0 0 8px var(--purple)}
+.fname{font-size:.68rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;min-height:1.05em;color:var(--text)}
+.pills{display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-bottom:5px;min-height:18px}
+.pill{font-family:var(--mono);font-size:.46rem;font-weight:700;letter-spacing:.06em;padding:2px 4px;border-radius:2px;text-transform:uppercase}
+.p-addr  {background:rgba(68,136,255,.1);border:1px solid rgba(68,136,255,.2);color:var(--blue)}
+.p-enc   {background:var(--lava-dim);border:1px solid rgba(255,106,0,.25);color:var(--lava2)}
+.p-br    {background:rgba(255,204,68,.08);border:1px solid rgba(255,204,68,.2);color:var(--ember)}
+.p-codec {background:rgba(176,74,255,.1);border:1px solid rgba(176,74,255,.25);color:var(--purple)}
+
+.vlc-link{display:flex;align-items:center;gap:4px;margin-bottom:5px;font-family:var(--mono);
+  font-size:.5rem;color:var(--muted);padding:3px 6px;background:rgba(255,255,255,.03);
+  border:1px solid var(--border);border-radius:3px;transition:all .15s;cursor:pointer;text-decoration:none}
+.vlc-link:hover{border-color:var(--lava);color:var(--lava2);background:var(--lava-dim)}
+.vlc-link svg{flex-shrink:0;opacity:.6}
+.vlc-link span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.vlc-link.disabled{opacity:.22;pointer-events:none}
+
+.ca{display:flex;gap:4px;align-items:center}
+.bcs{flex:1;font-family:var(--mono);font-size:.58rem;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;padding:5px 0;border:none;border-radius:3px;cursor:pointer;transition:all .15s}
+.bcs:disabled{opacity:.28;cursor:not-allowed}
+.bcs-start{background:linear-gradient(135deg,var(--lava),var(--lava2));color:#000}
+.bcs-stop {background:var(--red);color:#fff}
+.bcs:not(:disabled):hover{filter:brightness(1.12)}
+.ib{width:26px;height:26px;background:transparent;border:1px solid var(--border2);border-radius:3px;
+  color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;transition:all .15s;flex-shrink:0}
+.ib.loop-on{border-color:rgba(255,106,0,.4);color:var(--lava2)}
+.ib.edit-btn:hover{border-color:rgba(255,106,0,.4);color:var(--lava2)}
+.ib.del-btn:hover{border-color:rgba(255,34,68,.4);color:var(--red)}
+
+/* Activity panel */
+.activity-panel{position:fixed;right:0;top:0;bottom:0;width:280px;background:var(--surface);
+  border-left:1px solid var(--border2);z-index:700;transform:translateX(100%);
+  transition:transform .25s ease;display:flex;flex-direction:column;overflow:hidden}
+.activity-panel.open{transform:translateX(0)}
+.ap-header{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;
+  border-bottom:1px solid var(--border2);flex-shrink:0}
+.ap-title{font-family:var(--mono);font-size:.72rem;font-weight:800;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--lava2)}
+.ap-close{background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:4px;transition:color .15s}
+.ap-close:hover{color:var(--text)}
+.ap-body{flex:1;overflow-y:auto;padding:10px 0}
+.ap-entry{display:flex;gap:8px;padding:6px 14px;border-bottom:1px solid rgba(255,255,255,.03)}
+.ap-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.ap-dot.stream{background:var(--lava)}.ap-dot.info{background:var(--blue)}
+.ap-dot.system{background:var(--green)}.ap-dot.warn{background:var(--ember)}
+.ap-dot.error{background:var(--red)}.ap-dot.transcode{background:var(--purple)}
+.ap-text{flex:1;min-width:0}
+.ap-msg{font-family:var(--sans);font-size:.68rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-ts{font-family:var(--mono);font-size:.52rem;color:var(--muted);margin-top:1px}
+.ap-empty{padding:30px 14px;text-align:center;font-family:var(--mono);font-size:.6rem;color:var(--muted);letter-spacing:.1em}
+
+.ap-toggle{position:fixed;right:0;top:50%;transform:translateY(-50%);background:var(--card);
+  border:1px solid var(--border2);border-right:none;color:var(--muted);width:32px;height:52px;
+  padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  border-radius:5px 0 0 5px;transition:all .18s;z-index:699}
+.ap-toggle:hover{background:var(--surface);color:var(--lava2);border-color:rgba(255,106,0,.4)}
+.ap-toggle.has-new{color:var(--lava2);border-color:rgba(255,106,0,.5);box-shadow:-3px 0 12px rgba(255,106,0,.2)}
+
+/* Logs page */
+#page-logs{padding:14px 16px 40px}
+.log-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.log-h{font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);flex:1}
+.log-filter,.log-search{background:var(--surface);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:.6rem;padding:5px 8px;border-radius:3px;outline:none}
+.log-filter:focus,.log-search:focus{border-color:var(--lava)}
+.log-search{width:180px}
+.btn-sm-red{background:rgba(255,34,68,.1);border:1px solid rgba(255,34,68,.25);color:var(--red)}
+.btn-sm-red:hover{background:rgba(255,34,68,.2)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-left:6px;animation:ldot 2s infinite}
+@keyframes ldot{0%,100%{opacity:1}50%{opacity:.3}}
+.log-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.62rem}
+.log-table th{text-align:left;padding:6px 10px;font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--border2);font-weight:700;position:sticky;top:0;background:var(--bg);z-index:10}
+.log-table td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:top}
+.log-table tr:hover td{background:rgba(255,255,255,.02)}
+.log-ts{color:var(--muted);white-space:nowrap;font-size:.56rem}
+.log-level{white-space:nowrap;font-weight:700;font-size:.56rem;letter-spacing:.08em}
+.log-msg{color:var(--text)}
+.log-data{color:var(--muted);font-size:.54rem;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lvl-INFO{color:var(--blue)}.lvl-STREAM{color:var(--lava2)}.lvl-SYSTEM{color:var(--green)}
+.lvl-WARN{color:var(--ember)}.lvl-ERROR{color:var(--red)}.lvl-RAW{color:var(--muted)}
+.log-empty{padding:40px;text-align:center;font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em}
+
+/* Modals */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);z-index:800;
+  display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.mbg.open{opacity:1;pointer-events:all}
+.modal{background:var(--card);border:1px solid var(--border2);border-top:2px solid var(--lava);
+  border-radius:6px;width:420px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:22px}
+.modal-title{font-family:var(--mono);font-size:.84rem;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--lava2);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.fg{margin-bottom:12px}
+.fl{font-family:var(--mono);font-size:.52rem;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px}
+.fi,.fs{width:100%;background:var(--surface);border:1px solid var(--border2);color:var(--text);
+  font-family:var(--mono);font-size:.72rem;padding:7px 10px;border-radius:3px;outline:none;transition:border-color .15s}
+.fi:focus,.fs:focus{border-color:var(--lava)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fhint{font-family:var(--mono);font-size:.5rem;color:var(--muted);margin-top:3px}
+.divider{height:1px;background:var(--border);margin:12px 0}
+.stag{font-family:var(--mono);font-size:.5rem;font-weight:700;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+
+#toast{position:fixed;bottom:18px;right:18px;background:var(--card);border:1px solid var(--border2);
+  border-left:3px solid var(--lava);color:var(--text);font-family:var(--mono);font-size:.6rem;
+  padding:9px 14px;border-radius:4px;transform:translateY(10px);opacity:0;
+  transition:all .22s;z-index:9999;max-width:260px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.err{border-left-color:var(--red)}
+#toast.tc{border-left-color:var(--purple)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="hdr-top">
+    <div class="logo" onclick="window.location.reload()">
+      <div class="logo-orb">
+        <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="orbbase" cx="38%" cy="32%" r="65%">
+              <stop offset="0%" stop-color="#e8aaff"/><stop offset="30%" stop-color="#9b30d0"/>
+              <stop offset="65%" stop-color="#4a0880"/><stop offset="100%" stop-color="#1a0030"/>
+            </radialGradient>
+            <radialGradient id="orbglow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#cc44ff" stop-opacity=".7"/>
+              <stop offset="60%" stop-color="#7700cc" stop-opacity=".2"/>
+              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="orbhot" cx="36%" cy="30%" r="40%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity=".9"/>
+              <stop offset="40%" stop-color="#e0aaff" stop-opacity=".4"/>
+              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="orbcore" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ff6a00" stop-opacity=".9"/>
+              <stop offset="50%" stop-color="#cc2200" stop-opacity=".5"/>
+              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="orbblur"><feGaussianBlur stdDeviation="1.2"/></filter>
+            <filter id="crackshadow"><feDropShadow dx="0" dy="0" stdDeviation=".6" flood-color="#ff6a00" flood-opacity=".9"/></filter>
+          </defs>
+          <circle cx="21" cy="21" r="20" fill="none" stroke="rgba(160,40,220,.25)" stroke-width="1.5">
+            <animate attributeName="r" values="19;21;19" dur="3s" repeatCount="indefinite"/>
+            <animate attributeName="stroke-opacity" values=".25;.05;.25" dur="3s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="21" cy="21" r="17" fill="url(#orbbase)"/>
+          <ellipse cx="21" cy="21" rx="15" ry="6" fill="none" stroke="rgba(180,80,255,.18)" stroke-width="2.5" transform="rotate(-25 21 21)"/>
+          <ellipse cx="21" cy="21" rx="12" ry="4" fill="none" stroke="rgba(220,120,255,.12)" stroke-width="1.5" transform="rotate(20 21 21)"/>
+          <ellipse cx="21" cy="21" rx="9" ry="3" fill="none" stroke="rgba(255,106,0,.15)" stroke-width="1" transform="rotate(-50 21 21)"/>
+          <circle cx="21" cy="22" r="5" fill="url(#orbcore)" opacity=".7" filter="url(#orbblur)"/>
+          <g filter="url(#crackshadow)" stroke="#ff6a00" stroke-linecap="round">
+            <path d="M21 19 L19 14 L20 11" stroke-width=".9" opacity=".85"/>
+            <path d="M23 20 L27 16 L29 13" stroke-width=".7" opacity=".7"/>
+            <path d="M22 23 L25 28 L24 31" stroke-width=".8" opacity=".8"/>
+            <path d="M19 22 L15 26 L13 30" stroke-width=".7" opacity=".65"/>
+          </g>
+          <circle cx="15" cy="14" r="5" fill="url(#orbhot)" opacity=".85"/>
+          <circle cx="21" cy="21" r="17" fill="none" stroke="rgba(220,160,255,.3)" stroke-width=".8"/>
+          <circle cx="21" cy="21" r="19" fill="url(#orbglow)"/>
+          <circle cx="21" cy="21" r="2.5" fill="#ff9a3c" opacity=".9">
+            <animate attributeName="r" values="2;3.5;2" dur="2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".9;.3;.9" dur="2s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-name">LavaCast</div>
+        <div class="logo-sub">40-Ch · H.264 / H.265 Transcode</div>
+      </div>
+    </div>
+
+    <div class="meters">
+      <div class="meter">
+        <div class="m-hd"><span class="m-lbl">CPU</span><span class="m-val" id="cpu-val">—<span class="u">%</span></span></div>
+        <div class="bar-track"><div class="bar bar-cpu" id="cpu-bar"></div></div>
+      </div>
+      <div class="meter">
+        <div class="m-hd"><span class="m-lbl">RAM</span><span class="m-val" id="mem-val">—<span class="u">%</span></span></div>
+        <div class="bar-track"><div class="bar bar-mem" id="mem-bar"></div></div>
+      </div>
+      <div class="nic-wrap">
+        <select class="nic-sel" id="nic-monitor-sel" onchange="selMonitorNic=this.value;renderNic()" title="NIC to monitor">
+          <option>Detecting…</option>
+        </select>
+        <div class="nic-stats">
+          <div class="nic-s"><div class="nic-lbl">TX</div><div class="nic-val tx" id="nic-tx">—</div></div>
+          <div class="nic-s"><div class="nic-lbl">RX</div><div class="nic-val rx" id="nic-rx">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hdr-right">
+      <div class="hdr-badge">LIVE <b id="s-live">0</b>&nbsp;·&nbsp;LOADED <b id="s-loaded">0</b></div>
+      <button class="btn btn-lava" onclick="startAll()">▶ ALL</button>
+      <button class="btn btn-stop" onclick="stopAll()">■ ALL</button>
+      <button class="btn btn-ghost" onclick="openMod('m-settings')" title="Settings">⚙</button>
+    </div>
+  </div>
+  <div class="gstrip">
+    <span class="gs-lbl">Bitrate</span>
+    <select class="gs-sel" id="gbr-sel"></select>
+    <button class="btn-sm btn-sm-lava" onclick="applyGbr()">APPLY ALL</button>
+    <div style="width:1px;height:18px;background:var(--border2);margin:0 4px"></div>
+    <span class="nic-stream-lbl">Stream NIC</span>
+    <select class="nic-stream-sel" id="nic-stream-sel" onchange="applyStreamNic(this.value)" title="FFmpeg output interface">
+      <option value="">Auto (default route)</option>
+    </select>
+    <span class="gs-hint">Bitrate for copy-mode streams · Transcoded streams always copy at stream time</span>
+  </div>
+
+  <!-- Global Transcode Settings Strip -->
+  <div class="tc-strip" id="tc-strip">
+    <span class="tc-strip-lbl">⟳ Global Transcode</span>
+    <div class="tc-sep"></div>
+    <select class="tc-sel" id="gtc-codec" onchange="gtcCodecChange()">
+      <option value="copy">Copy — No Transcode</option>
+      <option value="h264" selected>H.264 — libx264</option>
+      <option value="h265">H.265 — libx265</option>
+    </select>
+    <select class="tc-sel" id="gtc-res">
+      <option value="original">Original Res</option>
+      <option value="720p">720p HD</option>
+      <option value="1080p" selected>1080p Full HD</option>
+      <option value="1440p">1440p QHD</option>
+      <option value="4k">4K UHD (2160p)</option>
+    </select>
+    <select class="tc-sel" id="gtc-fps">
+      <option value="original" selected>Original FPS</option>
+      <option value="23.976">23.976 fps</option>
+      <option value="24">24 fps</option>
+      <option value="25">25 fps</option>
+      <option value="29.97">29.97 fps</option>
+      <option value="30">30 fps</option>
+      <option value="50">50 fps</option>
+      <option value="59.94">59.94 fps</option>
+      <option value="60">60 fps</option>
+    </select>
+    <select class="tc-sel" id="gtc-preset">
+      <option value="ultrafast">Ultrafast</option>
+      <option value="fast" selected>Fast</option>
+      <option value="medium">Medium</option>
+      <option value="slow">Slow (best quality)</option>
+    </select>
+    <div class="tc-sep"></div>
+    <div class="tc-br-wrap">
+      <span class="tc-br-lbl">Bitrate</span>
+      <span class="tc-br-val" id="gtc-br-val">6 Mbps</span>
+      <input type="range" class="tc-slider" id="gtc-br-slider"
+             min="6" max="20" step="1" value="6" oninput="gtcBrUpdate()">
+    </div>
+    <div class="tc-sep"></div>
+    <button class="btn-sm btn-sm-purple" onclick="saveGlobalTC()">SAVE</button>
+    <span class="tc-hint" id="gtc-hint">Saved</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('channels',this)">Channels</button>
+  <button class="tab" onclick="showTab('logs',this);loadLogs()">Logs</button>
+</div>
+
+<!-- CHANNELS -->
+<div id="page-channels" class="tab-panel active">
+  <div style="padding:12px 16px 40px">
+    <div class="sec-hdr">
+      <span class="sec-lbl">Stream Channels</span>
+      <div class="sec-line"></div>
+      <span class="sec-lbl">40 CH · UDP / RTP · H.264 / H.265 · Global Transcode</span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<!-- LOGS -->
+<div id="page-logs" class="tab-panel">
+  <div id="page-logs-inner" style="padding:14px 16px 40px">
+    <div class="log-toolbar">
+      <span class="log-h">System Log <span class="live-dot"></span></span>
+      <select class="log-filter" id="log-lf" onchange="renderLogs()">
+        <option value="">All</option><option value="INFO">INFO</option>
+        <option value="STREAM">STREAM</option><option value="SYSTEM">SYSTEM</option>
+        <option value="WARN">WARN</option><option value="ERROR">ERROR</option>
+      </select>
+      <input class="log-search" id="log-s" placeholder="Search…" oninput="renderLogs()">
+      <button class="btn-sm btn-sm-lava" onclick="loadLogs()">↻ Refresh</button>
+      <button class="btn-sm btn-sm-red"  onclick="clearLogs()">✕ Clear</button>
+    </div>
+    <table class="log-table">
+      <thead><tr><th style="width:130px">Timestamp</th><th style="width:65px">Level</th><th>Message</th><th>Data</th></tr></thead>
+      <tbody id="log-body"><tr><td colspan="4" class="log-empty">Click the Logs tab to load entries.</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ACTIVITY PANEL -->
+<button class="ap-toggle" id="ap-toggle" onclick="toggleActivity()" title="Activity Log">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+  </svg>
+</button>
+<div class="activity-panel" id="ap">
+  <div class="ap-header">
+    <span class="ap-title">Activity</span>
+    <button class="ap-close" onclick="toggleActivity()">✕</button>
+  </div>
+  <div class="ap-body" id="ap-body"><div class="ap-empty">No activity yet.</div></div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="mbg" id="m-settings">
+  <div class="modal">
+    <div class="modal-title">LavaCast 40 Settings</div>
+    <div class="stag">Media Storage</div>
+    <div class="fg">
+      <label class="fl">Media Directory (parent)</label>
+      <input class="fi" id="cfg-path" placeholder="/home/user/lavacast40/media">
+      <div class="fhint">Originals saved to media/originals/ · Transcoded to media/transcoded/</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stag">Stream Defaults</div>
+    <div class="fg"><label class="fl">Default Encapsulation</label>
+      <select class="fs" id="cfg-enc">
+        <option value="udp">UDP — MPEG-TS over UDP</option>
+        <option value="rtp">RTP — MPEG-TS over RTP</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Global Bitrate (copy-mode streams)</label>
+      <select class="fs" id="cfg-gbr"></select>
+    </div>
+    <div class="ma">
+      <button class="btn btn-ghost" onclick="closeMod('m-settings')">Cancel</button>
+      <button class="btn btn-lava"  onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANNEL EDIT MODAL -->
+<div class="mbg" id="m-ch">
+  <div class="modal">
+    <div class="modal-title" id="ch-title">Channel Settings</div>
+    <input type="hidden" id="e-cid">
+
+    <div class="stag">Network / Stream</div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Multicast IP</label><input class="fi" id="e-ip" placeholder="239.1.1.1"></div>
+      <div class="fg"><label class="fl">Port</label><input class="fi" id="e-port" type="number" min="1024" max="65535"></div>
+    </div>
+    <div class="fg"><label class="fl">Encapsulation</label>
+      <select class="fs" id="e-enc">
+        <option value="udp">UDP — MPEG-TS over UDP</option>
+        <option value="rtp">RTP — MPEG-TS over RTP</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Bitrate (copy-mode only)</label>
+      <select class="fs" id="e-br"></select>
+    </div>
+    <div class="fg" style="display:flex;align-items:center;gap:10px;padding:3px 0">
+      <label class="fl" style="margin:0">Loop File</label>
+      <input type="checkbox" id="e-loop" style="width:14px;height:14px;accent-color:var(--lava)">
+    </div>
+
+    <div class="divider"></div>
+    <div class="stag">Transcode Profile</div>
+    <div class="fhint" style="margin-bottom:10px;font-size:.52rem;color:var(--muted)">
+      Select codec for next upload — or click Re-Transcode to apply now to the loaded file.
+    </div>
+    <div class="fg">
+      <label class="fl">Video Codec</label>
+      <select class="fs" id="e-codec" onchange="toggleCodecOpts()">
+        <option value="copy">Copy — Passthrough (no transcode)</option>
+        <option value="h264">H.264 — libx264 (best compatibility)</option>
+        <option value="h265">H.265 — libx265 (best compression)</option>
+      </select>
+    </div>
+    <div id="codec-opts" style="display:none">
+      <div class="fr">
+        <div class="fg">
+          <label class="fl">Preset</label>
+          <select class="fs" id="e-preset">
+            <option value="ultrafast">Ultrafast (lowest CPU)</option>
+            <option value="fast" selected>Fast</option>
+            <option value="medium">Medium</option>
+            <option value="slow">Slow (best quality)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Video Bitrate</label>
+          <input class="fi" id="e-vbr" placeholder="e.g. 4M, 8000k">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Audio Bitrate</label>
+        <input class="fi" id="e-abr" placeholder="e.g. 192k, 256k">
+      </div>
+    </div>
+
+    <div class="ma">
+      <button class="btn btn-ghost" onclick="closeMod('m-ch')">Cancel</button>
+      <button class="btn btn-amber" id="retc-btn" onclick="doRetranscode()" style="display:none">↺ Re-Transcode</button>
+      <button class="btn btn-lava"  onclick="saveChSettings()">Apply Network</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const socket = io();
+const MAX    = 40;
+const state  = {};
+let selMonitorNic = null;
+let nicCache      = {};
+let nicReady      = false;
+let allNics       = [];
+let allLogs       = [];
+let activityOpen  = false;
+let apHasNew      = false;
+let presets = [
+  ["Passthrough (copy)",""],["1 Mbps","1M"],["2 Mbps","2M"],
+  ["4 Mbps","4M"],["6 Mbps","6M"],["8 Mbps","8M"],
+  ["10 Mbps","10M"],["15 Mbps","15M"],["20 Mbps","20M"]
+];
+
+// Global transcode profile (mirrors server GLOBAL_TC)
+let globalTC={codec:'h264',preset:'fast',vbitrate:'6M',abitrate:'192k',resolution:'1080p',fps:'original'};
+
+function defState(){
+  return {filename:null,ip:null,port:null,encap:'udp',bitrate:'',loop:true,running:false,
+          codec:'copy',preset:'fast',vbitrate:'6M',abitrate:'192k',
+          resolution:'1080p',fps:'original',transcoding:false};
+}
+
+// ── Global TC helpers ────────────────────────────────────────────────────────
+function gtcCodecChange(){
+  const isCopy=document.getElementById('gtc-codec').value==='copy';
+  ['gtc-res','gtc-fps','gtc-preset','gtc-br-slider'].forEach(id=>{
+    document.getElementById(id).disabled=isCopy;
+  });
+}
+function gtcBrUpdate(){
+  const v=document.getElementById('gtc-br-slider').value;
+  document.getElementById('gtc-br-val').textContent=v+' Mbps';
+}
+async function saveGlobalTC(){
+  globalTC.codec      = document.getElementById('gtc-codec').value;
+  globalTC.preset     = document.getElementById('gtc-preset').value;
+  globalTC.resolution = document.getElementById('gtc-res').value;
+  globalTC.fps        = document.getElementById('gtc-fps').value;
+  const mbps          = document.getElementById('gtc-br-slider').value;
+  globalTC.vbitrate   = mbps+'M';
+  globalTC.abitrate   = '192k';
+  const r=await fetch('/api/global_transcode',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(globalTC)});
+  const d=await r.json();
+  if(d.status==='ok'){
+    const h=document.getElementById('gtc-hint');
+    h.classList.add('show'); setTimeout(()=>h.classList.remove('show'),2200);
+    toast('Global transcode profile saved.');
+  }
+}
+async function loadGlobalTC(){
+  try{
+    const d=await(await fetch('/api/global_transcode')).json();
+    Object.assign(globalTC,d);
+    document.getElementById('gtc-codec').value  = d.codec||'h264';
+    document.getElementById('gtc-preset').value = d.preset||'fast';
+    document.getElementById('gtc-res').value    = d.resolution||'1080p';
+    document.getElementById('gtc-fps').value    = d.fps||'original';
+    const mbps=parseInt((d.vbitrate||'6M').replace(/[^0-9]/g,''))||6;
+    document.getElementById('gtc-br-slider').value=mbps;
+    document.getElementById('gtc-br-val').textContent=mbps+' Mbps';
+    gtcCodecChange();
+  }catch(e){}
+}
+
+function showTab(n,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+n).classList.add('active');
+  btn.classList.add('active');
+}
+
+function populatePresets(id,val){
+  const sel=document.getElementById(id); sel.innerHTML='';
+  presets.forEach(([lbl,v])=>{
+    const o=document.createElement('option');
+    o.value=v; o.textContent=lbl; if(v===(val||'')) o.selected=true; sel.appendChild(o);
+  });
+}
+
+function populateNicDropdowns(nics,selNic){
+  allNics=nics;
+  const monSel=document.getElementById('nic-monitor-sel');
+  if(!nicReady&&nics.length){
+    monSel.innerHTML=''; nics.forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;monSel.appendChild(o);});
+    selMonitorNic=monSel.value; nicReady=true;
+  }
+  const strSel=document.getElementById('nic-stream-sel');
+  strSel.innerHTML='<option value="">Auto (default route)</option>';
+  nics.forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;if(n===selNic)o.selected=true;strSel.appendChild(o);});
+}
+
+async function applyStreamNic(nic){
+  await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nic})});
+  toast(nic?`Stream NIC → ${nic}`:'Stream NIC → Auto');
+  addActivity('info',nic?`Stream NIC set to ${nic}`:'Stream NIC set to Auto');
+}
+
+(function(){
+  const g=document.getElementById('grid');
+  for(let i=0;i<MAX;i++){
+    state[i]=defState();
+    g.insertAdjacentHTML('beforeend',cardHTML(i));
+  }
+  populatePresets('gbr-sel',''); populatePresets('cfg-gbr','');
+})();
+
+function cardHTML(i){
+  const n=String(i+1).padStart(2,'0');
+  return `
+  <div class="card" id="card-${i}">
+    <div class="tw" id="tw-${i}" onclick="triggerUp(${i})">
+      <div class="tw-ph" id="ph-${i}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>Load File
+      </div>
+      <img id="img-${i}" src="" alt="">
+      <div class="live-badge">● LIVE</div>
+      <div class="tc-badge">⟳ TC</div>
+      <button class="thumb-refresh" id="tr-${i}" onclick="event.stopPropagation();refreshThumb(${i})" title="Refresh thumbnail">↻</button>
+      <div class="up-ov" id="ov-${i}">
+        <span class="up-lbl phase-upload" id="up-lbl-${i}">Uploading</span>
+        <div class="pb-track"><div class="pb pb-upload" id="pb-${i}"></div></div>
+        <span class="pb-pct" id="pct-${i}">0%</span>
+        <span class="up-eta" id="eta-${i}"></span>
+      </div>
+      <div class="hover-load">
+        <label class="mini-btn" onclick="event.stopPropagation();triggerUp(${i})">⬆ Load</label>
+      </div>
+      <input type="file" id="fi-${i}"
+        accept=".mp4,.mkv,.avi,.mov,.ts,.m2ts,.mp3,.wav,.flac,.aac,.m4a,.ogg"
+        onchange="uploadFile(${i},this)">
+    </div>
+    <div class="cb">
+      <div class="ctop">
+        <span class="chid">CH ${n}</span>
+        <div class="sdot" id="dot-${i}"></div>
+      </div>
+      <div class="fname" id="fn-${i}">—</div>
+      <div class="pills">
+        <span class="pill p-addr"  id="pa-${i}">—</span>
+        <span class="pill p-enc"   id="pe-${i}">UDP</span>
+        <span class="pill p-br"    id="pbr-${i}">PASS</span>
+        <span class="pill p-codec" id="pco-${i}">COPY</span>
+      </div>
+      <a class="vlc-link disabled" id="vlc-${i}" onclick="openVlc(${i})">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span id="vlc-lbl-${i}">Open in VLC</span>
+      </a>
+      <div class="ca">
+        <button class="bcs bcs-start" id="bs-${i}" onclick="toggleStream(${i})" disabled>▶ Start</button>
+        <button class="ib loop-on" id="bl-${i}" onclick="toggleLoop(${i})" title="Loop">↻</button>
+        <button class="ib edit-btn" onclick="openChMod(${i})" title="Edit">✎</button>
+        <button class="ib del-btn"  onclick="removeCh(${i})" title="Remove">✕</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function refreshThumb(i){
+  const img=document.getElementById(`img-${i}`); if(!img.src) return;
+  img.style.opacity='.4';
+  const ni=new Image(); ni.onload=()=>{img.src=ni.src;img.style.opacity='1';};
+  ni.src=`/api/thumbnail/${i}?t=`+Date.now();
+}
+
+function triggerUp(i){
+  if(state[i].running||state[i].transcoding) return;
+  document.getElementById(`fi-${i}`).click();
+}
+
+function uploadFile(i,inp){
+  const file=inp.files[0]; if(!file) return;
+  const tw=document.getElementById(`tw-${i}`);
+  const lbl=document.getElementById(`up-lbl-${i}`);
+  const pb=document.getElementById(`pb-${i}`);
+  // Reset to upload phase
+  lbl.textContent='Uploading'; lbl.className='up-lbl phase-upload';
+  pb.className='pb pb-upload'; pb.style.width='0%';
+  document.getElementById(`pct-${i}`).textContent='0%';
+  tw.classList.add('uploading');
+
+  const fd=new FormData(); fd.append('file',file);
+  // Use global transcode profile for every upload
+  fd.append('codec',      globalTC.codec);
+  fd.append('preset',     globalTC.preset);
+  fd.append('vbitrate',   globalTC.vbitrate);
+  fd.append('abitrate',   globalTC.abitrate);
+  fd.append('resolution', globalTC.resolution);
+  fd.append('fps',        globalTC.fps);
+
+  const xhr=new XMLHttpRequest(); xhr.open('POST',`/api/upload/${i}`);
+  xhr.upload.onprogress=e=>{
+    if(e.lengthComputable){
+      const p=Math.round(e.loaded/e.total*100);
+      pb.style.width=p+'%'; document.getElementById(`pct-${i}`).textContent=p+'%';
+    }
+  };
+  xhr.onload=()=>{
+    if(xhr.status===200){
+      if(globalTC.codec==='copy'){
+        tw.classList.remove('uploading');
+        pb.style.width='0%';
+      }
+      // else: transcode_start socket event will switch the overlay
+      toast(`CH${i+1}: file received`+(globalTC.codec!=='copy'?` — transcoding ${globalTC.codec.toUpperCase()}…`:'…'));
+      addActivity('info',`CH${i+1} uploaded: ${file.name}`);
+    } else {
+      tw.classList.remove('uploading'); pb.style.width='0%';
+      toast('Upload error: '+(JSON.parse(xhr.responseText||'{}').error||'?'),true);
+    }
+    inp.value='';
+  };
+  xhr.onerror=()=>{ tw.classList.remove('uploading'); toast('Upload failed.',true); inp.value=''; };
+  xhr.send(fd);
+}
+
+// ── Socket events ─────────────────────────────────────────────────────────────
+socket.on('transcode_start',d=>{
+  state[d.cid].transcoding=true;
+  const tw=document.getElementById(`tw-${d.cid}`);
+  const lbl=document.getElementById(`up-lbl-${d.cid}`);
+  const pb=document.getElementById(`pb-${d.cid}`);
+  document.getElementById(`card-${d.cid}`).classList.add('transcoding');
+  tw.classList.remove('uploading'); tw.classList.add('uploading'); // keep visible
+  lbl.textContent=`Transcoding ${(d.codec||'').toUpperCase()} · ${d.preset||''}`;
+  lbl.className='up-lbl phase-tc';
+  pb.className='pb pb-tc'; pb.style.width='0%';
+  document.getElementById(`pct-${d.cid}`).textContent='0%';
+  document.getElementById(`eta-${d.cid}`).textContent='';
+  addActivity('transcode',`CH${d.cid+1} transcoding ${(d.codec||'').toUpperCase()} (${d.preset||''})`);
+});
+
+socket.on('transcode_progress',d=>{
+  document.getElementById(`pb-${d.cid}`).style.width=d.pct+'%';
+  document.getElementById(`pct-${d.cid}`).textContent=d.pct+'%';
+  const eta=d.eta_secs||0;
+  const etaEl=document.getElementById(`eta-${d.cid}`);
+  if(etaEl){
+    if(eta>0){
+      const m=Math.floor(eta/60),s=eta%60;
+      etaEl.textContent=m>0?`${m}m ${s}s remaining`:`${s}s remaining`;
+    } else { etaEl.textContent=''; }
+  }
+});
+
+socket.on('transcode_error',d=>{
+  state[d.cid].transcoding=false;
+  document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
+  document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
+  toast(`CH${d.cid+1} transcode error: ${d.error}`,true);
+  addActivity('error',`CH${d.cid+1} transcode failed: ${d.error}`);
+});
+
+socket.on('channel_ready',d=>{
+  const s=state[d.cid];
+  Object.assign(s,{filename:d.filename,ip:d.ip,port:d.port,
+    encap:d.encap,bitrate:d.bitrate,loop:d.loop,
+    codec:d.codec||'copy',transcoding:false});
+  // Clear overlay
+  document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
+  document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
+  document.getElementById(`pb-${d.cid}`).style.width='0%';
+  document.getElementById(`pct-${d.cid}`).textContent='';
+  document.getElementById(`eta-${d.cid}`).textContent='';
+  // Thumbnail
+  const img=document.getElementById(`img-${d.cid}`);
+  if(d.thumb){ img.src=d.thumb; img.style.display='block'; document.getElementById(`ph-${d.cid}`).style.display='none'; document.getElementById(`tw-${d.cid}`).classList.add('has-thumb'); }
+  document.getElementById(`bs-${d.cid}`).disabled=false;
+  refreshCard(d.cid); updateStats();
+  addActivity('info',`CH${d.cid+1} ready: ${d.filename} [${(d.codec||'copy').toUpperCase()}]`);
+  toast(`CH${d.cid+1} ready: ${d.filename}`);
+});
+
+socket.on('stream_stopped',d=>{ state[d.cid].running=false; setStop(d.cid); updateStats(); addActivity('stream',`CH${d.cid+1} stopped`); });
+socket.on('stream_restarted',d=>{ state[d.cid].running=true; setRun(d.cid); updateStats(); addActivity('stream',`CH${d.cid+1} restarted`); });
+socket.on('all_stopped',()=>{ for(let i=0;i<MAX;i++){state[i].running=false;setStop(i);} updateStats(); addActivity('stream','All streams stopped'); });
+
+socket.on('metrics',d=>{
+  const cpu=parseFloat(d.cpu)||0;
+  document.getElementById('cpu-val').innerHTML=cpu.toFixed(1)+'<span class="u">%</span>';
+  const cb=document.getElementById('cpu-bar'); cb.style.width=Math.min(cpu,100)+'%'; cb.classList.toggle('hot',cpu>85);
+  const mem=parseFloat(d.mem)||0;
+  document.getElementById('mem-val').innerHTML=mem.toFixed(1)+'<span class="u">%</span>';
+  document.getElementById('mem-bar').style.width=Math.min(mem,100)+'%';
+  if(d.nics&&Object.keys(d.nics).length){
+    const sel=document.getElementById('nic-monitor-sel');
+    if(!nicReady){ sel.innerHTML=''; Object.keys(d.nics).forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;sel.appendChild(o);}); selMonitorNic=sel.value; nicReady=true; }
+    nicCache=d.nics; renderNic();
+  }
+});
+
+function renderNic(){
+  if(!selMonitorNic||!nicCache[selMonitorNic]) return;
+  const n=nicCache[selMonitorNic];
+  document.getElementById('nic-tx').textContent=(n.tx_mbps||0).toFixed(3)+' Mbps';
+  document.getElementById('nic-rx').textContent=(n.rx_mbps||0).toFixed(3)+' Mbps';
+}
+
+function openVlc(i){ const s=state[i]; if(!s.ip) return; window.location.href=`vlc://${s.encap==='rtp'?'rtp':'udp'}://@${s.ip}:${s.port}`; }
+function updateVlcLink(i){
+  const s=state[i]; const el=document.getElementById(`vlc-${i}`); const lb=document.getElementById(`vlc-lbl-${i}`);
+  if(s.ip){ el.classList.remove('disabled'); lb.textContent=`${(s.encap||'udp').toUpperCase()}://@${s.ip}:${s.port}`; }
+  else { el.classList.add('disabled'); lb.textContent='Open in VLC'; }
+}
+
+async function toggleStream(i){
+  if(!state[i].filename||state[i].transcoding) return;
+  if(state[i].running){
+    await fetch(`/api/stop/${i}`,{method:'POST'}); state[i].running=false; setStop(i);
+    addActivity('stream',`CH${i+1} stopped manually`);
+  } else {
+    await fetch(`/api/start/${i}`,{method:'POST'}); state[i].running=true; setRun(i);
+    addActivity('stream',`CH${i+1} started`);
+  }
+  updateStats();
+}
+async function startAll(){ await fetch('/api/start_all',{method:'POST'}); for(let i=0;i<MAX;i++) if(state[i].filename&&!state[i].transcoding){state[i].running=true;setRun(i);} updateStats(); addActivity('stream','Start All triggered'); }
+async function stopAll(){ await fetch('/api/stop_all',{method:'POST'}); addActivity('stream','Stop All triggered'); }
+
+async function removeCh(i){
+  if(state[i].running) await fetch(`/api/stop/${i}`,{method:'POST'});
+  await fetch(`/api/remove/${i}`,{method:'DELETE'});
+  state[i]=defState();
+  document.getElementById(`fn-${i}`).textContent='—';
+  document.getElementById(`pa-${i}`).textContent='—';
+  document.getElementById(`pe-${i}`).textContent='UDP';
+  document.getElementById(`pbr-${i}`).textContent='PASS';
+  document.getElementById(`pco-${i}`).textContent='COPY';
+  document.getElementById(`bs-${i}`).disabled=true;
+  document.getElementById(`img-${i}`).style.display='none'; document.getElementById(`img-${i}`).src='';
+  document.getElementById(`ph-${i}`).style.display='flex';
+  document.getElementById(`tw-${i}`).classList.remove('has-thumb','uploading');
+  document.getElementById(`card-${i}`).classList.remove('running','transcoding');
+  setStop(i); updateVlcLink(i); updateStats();
+  addActivity('info',`CH${i+1} removed`);
+}
+
+function toggleLoop(i){ state[i].loop=!state[i].loop; document.getElementById(`bl-${i}`).classList.toggle('loop-on',state[i].loop); }
+
+function refreshCard(i){
+  const s=state[i];
+  if(s.filename) document.getElementById(`fn-${i}`).textContent=trunc(s.filename,24);
+  document.getElementById(`pa-${i}`).textContent=s.ip?`${s.ip}:${s.port}`:'—';
+  document.getElementById(`pe-${i}`).textContent=(s.encap||'udp').toUpperCase();
+  document.getElementById(`pbr-${i}`).textContent=s.bitrate||'PASS';
+  document.getElementById(`pco-${i}`).textContent=(s.codec||'copy').toUpperCase();
+  document.getElementById(`bl-${i}`).classList.toggle('loop-on',s.loop!==false);
+  updateVlcLink(i);
+}
+function setRun(i){ document.getElementById(`card-${i}`).classList.add('running'); const b=document.getElementById(`bs-${i}`); b.textContent='■ Stop'; b.className='bcs bcs-stop'; }
+function setStop(i){ document.getElementById(`card-${i}`).classList.remove('running'); const b=document.getElementById(`bs-${i}`); b.textContent='▶ Start'; b.className='bcs bcs-start'; }
+function updateStats(){ let live=0,loaded=0; for(let i=0;i<MAX;i++){if(state[i].filename)loaded++;if(state[i].running)live++;} document.getElementById('s-live').textContent=live; document.getElementById('s-loaded').textContent=loaded; }
+
+async function applyGbr(){
+  const br=document.getElementById('gbr-sel').value;
+  const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bitrate:br})});
+  const d=await r.json(); if(d.error){toast(d.error,true);return;}
+  for(let i=0;i<MAX;i++) if(state[i].filename&&state[i].codec==='copy'){ state[i].bitrate=br; document.getElementById(`pbr-${i}`).textContent=br||'PASS'; }
+  toast(br?`Global bitrate → ${br}`:'Bitrate → Passthrough');
+  addActivity('info',br?`Global bitrate set to ${br}`:'Global bitrate cleared');
+}
+
+function toggleCodecOpts(){
+  const v=document.getElementById('e-codec').value;
+  document.getElementById('codec-opts').style.display=v==='copy'?'none':'block';
+  document.getElementById('retc-btn').style.display=
+    (v!=='copy'&&!!state[parseInt(document.getElementById('e-cid').value||'-1')]?.filename)?'block':'none';
+}
+
+function openChMod(i){
+  const s=state[i];
+  document.getElementById('e-cid').value=i;
+  document.getElementById('ch-title').textContent=`CH ${String(i+1).padStart(2,'0')} — Settings`;
+  document.getElementById('e-ip').value=s.ip||'';
+  document.getElementById('e-port').value=s.port||'';
+  document.getElementById('e-enc').value=s.encap||'udp';
+  document.getElementById('e-loop').checked=s.loop!==false;
+  populatePresets('e-br',s.bitrate||'');
+  document.getElementById('e-codec').value=s.codec||'copy';
+  document.getElementById('e-preset').value=s.preset||'fast';
+  document.getElementById('e-vbr').value=s.vbitrate||'4M';
+  document.getElementById('e-abr').value=s.abitrate||'192k';
+  toggleCodecOpts();
+  // Show re-transcode button only if file loaded and codec not copy
+  const hasFile=!!s.filename;
+  const codec=s.codec||'copy';
+  document.getElementById('retc-btn').style.display=(hasFile&&codec!=='copy')?'block':'none';
+  openMod('m-ch');
+}
+
+async function saveChSettings(){
+  const i=parseInt(document.getElementById('e-cid').value);
+  // Save transcode prefs to local state (used on next upload or retranscode)
+  state[i].codec    = document.getElementById('e-codec').value;
+  state[i].preset   = document.getElementById('e-preset').value;
+  state[i].vbitrate = document.getElementById('e-vbr').value||'4M';
+  state[i].abitrate = document.getElementById('e-abr').value||'192k';
+  state[i].encap    = document.getElementById('e-enc').value;
+  state[i].loop     = document.getElementById('e-loop').checked;
+  // Push network settings to backend
+  const body={
+    ip:     document.getElementById('e-ip').value.trim()||undefined,
+    port:   document.getElementById('e-port').value.trim()||undefined,
+    encap:  state[i].encap,
+    bitrate:document.getElementById('e-br').value,
+    loop:   state[i].loop
+  };
+  const r=await fetch(`/api/channel/${i}/settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.meta){Object.assign(state[i],{ip:d.meta.ip,port:d.meta.port,encap:d.meta.encap,bitrate:d.meta.bitrate,loop:d.meta.loop});refreshCard(i);}
+  closeMod('m-ch');
+  toast(`CH${i+1} network settings saved`+(d.meta?.running?' — restarted':''));
+  addActivity('info',`CH${i+1} settings saved`);
+}
+
+async function doRetranscode(){
+  const i=parseInt(document.getElementById('e-cid').value);
+  if(state[i].running){ toast('Stop the stream before re-transcoding.',true); return; }
+  const codec   =document.getElementById('e-codec').value;
+  const preset  =document.getElementById('e-preset').value;
+  const vbitrate=document.getElementById('e-vbr').value||'4M';
+  const abitrate=document.getElementById('e-abr').value||'192k';
+  // Save to state
+  Object.assign(state[i],{codec,preset,vbitrate,abitrate});
+  closeMod('m-ch');
+  const r=await fetch(`/api/retranscode/${i}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codec,preset,vbitrate,abitrate})});
+  const d=await r.json();
+  if(d.error){ toast(`Error: ${d.error}`,true); return; }
+  toast(`CH${i+1}: re-transcoding with ${codec.toUpperCase()}…`,'tc');
+  addActivity('transcode',`CH${i+1} re-transcode triggered: ${codec.toUpperCase()} (${preset})`);
+}
+
+function openMod(id){
+  if(id==='m-settings') populatePresets('cfg-gbr',document.getElementById('gbr-sel').value);
+  document.getElementById(id).classList.add('open');
+}
+function closeMod(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.mbg').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+async function saveSettings(){
+  const body={media_path:document.getElementById('cfg-path').value.trim(),bitrate:document.getElementById('cfg-gbr').value};
+  const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json(); if(d.error){toast(d.error,true);return;}
+  for(let o of document.getElementById('gbr-sel').options) o.selected=(o.value===body.bitrate);
+  closeMod('m-settings'); toast('Settings saved.');
+}
+
+function toggleActivity(){ activityOpen=!activityOpen; document.getElementById('ap').classList.toggle('open',activityOpen); if(activityOpen){apHasNew=false;document.getElementById('ap-toggle').classList.remove('has-new');} }
+
+function addActivity(type,msg){
+  const ts=new Date().toTimeString().slice(0,8);
+  const body=document.getElementById('ap-body');
+  const empty=body.querySelector('.ap-empty'); if(empty) empty.remove();
+  const div=document.createElement('div'); div.className='ap-entry';
+  div.innerHTML=`<div class="ap-dot ${type}"></div><div class="ap-text"><div class="ap-msg">${esc(msg)}</div><div class="ap-ts">${ts}</div></div>`;
+  body.insertBefore(div,body.firstChild);
+  while(body.children.length>100) body.removeChild(body.lastChild);
+  if(!activityOpen){apHasNew=true;document.getElementById('ap-toggle').classList.add('has-new');}
+}
+
+async function loadLogs(){ const r=await fetch('/api/logs?n=500'); const d=await r.json(); allLogs=d.entries.reverse(); renderLogs(); }
+function renderLogs(){
+  const lf=(document.getElementById('log-lf').value||'').trim();
+  const s=(document.getElementById('log-s').value||'').toLowerCase();
+  const body=document.getElementById('log-body');
+  const filtered=allLogs.filter(e=>{if(lf&&e.level!==lf)return false;if(s&&!e.msg.toLowerCase().includes(s)&&!JSON.stringify(e.data||'').toLowerCase().includes(s))return false;return true;});
+  if(!filtered.length){body.innerHTML='<tr><td colspan="4" class="log-empty">No entries match filter.</td></tr>';return;}
+  body.innerHTML=filtered.map(e=>`<tr><td class="log-ts">${e.ts}</td><td class="log-level lvl-${e.level}">${e.level}</td><td class="log-msg">${esc(e.msg)}</td><td class="log-data" title="${esc(JSON.stringify(e.data||''))}">${esc(JSON.stringify(e.data||'').replace(/^"|"$/g,''))}</td></tr>`).join('');
+}
+async function clearLogs(){ await fetch('/api/logs/clear',{method:'POST'}); allLogs=[]; renderLogs(); toast('Log cleared.'); }
+setInterval(()=>{ if(document.getElementById('page-logs').classList.contains('active')) loadLogs(); },5000);
+
+function trunc(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let tt;
+function toast(msg,errOrType=false){
+  const el=document.getElementById('toast'); el.textContent=msg;
+  const cls=errOrType===true?'err':(errOrType||'');
+  el.className='show'+(cls?' '+cls:'');
+  clearTimeout(tt); tt=setTimeout(()=>el.className='',3800);
+}
+
+fetch('/api/status').then(r=>r.json()).then(d=>{
+  if(d.bitrate_presets) presets=d.bitrate_presets;
+  populatePresets('gbr-sel',d.global_bitrate||''); populatePresets('cfg-gbr',d.global_bitrate||'');
+  if(d.nics&&d.nics.length) populateNicDropdowns(d.nics,d.selected_nic||'');
+  for(const[cs,m] of Object.entries(d.channels||{})){
+    const i=parseInt(cs);
+    Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
+      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+    refreshCard(i);
+    if(m.filename){
+      document.getElementById(`bs-${i}`).disabled=false;
+      const img=document.getElementById(`img-${i}`);
+      img.src=m.thumb+'?t='+Date.now(); img.style.display='block';
+      document.getElementById(`ph-${i}`).style.display='none';
+      document.getElementById(`tw-${i}`).classList.add('has-thumb');
+    }
+    if(m.running) setRun(i);
+  }
+  if(d.global_tc) Object.assign(globalTC,d.global_tc);
+  loadGlobalTC();
+  updateStats(); addActivity('system','LavaCast 40 v8 UI connected');
+});
+</script>
+</body>
+</html>
