@@ -20,11 +20,11 @@ import threading
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO
 
-from streaming.streamer import StreamManager, BITRATE_PRESETS
-from transcoding.transcoder import VALID_CODECS, VALID_PRESETS, VALID_RESOLUTIONS, VALID_FPS
-from uploading.uploader import process_upload, validate_extension
-import shared.logger as logger
-from shared.metrics import collect
+from streamer import StreamManager, BITRATE_PRESETS
+from transcoder import VALID_CODECS, VALID_PRESETS, VALID_RESOLUTIONS, VALID_FPS
+from uploader import process_upload, validate_extension
+import logger
+from metrics import collect
 
 # ---------------------------------------------------------------------------
 # App setup
