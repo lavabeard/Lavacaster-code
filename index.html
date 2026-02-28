@@ -26,19 +26,16 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .hdr-top{display:flex;align-items:center;gap:12px;padding:0 16px;height:60px;flex-wrap:wrap}
 
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;text-decoration:none}
-.logo-orb{width:42px;height:42px;flex-shrink:0;position:relative}
-.logo-orb svg{width:42px;height:42px;filter:drop-shadow(0 0 8px rgba(180,60,255,.5));transition:filter .5s}
-.logo-orb.ws-lost svg{filter:drop-shadow(0 0 8px rgba(255,40,40,.7)) hue-rotate(75deg) saturate(1.6)}
+.logo-orb{height:56px;flex-shrink:0;position:relative}
+.logo-orb svg{height:56px;width:auto;filter:drop-shadow(0 0 9px rgba(30,200,100,.55));transition:filter .65s}
+.logo-orb.ws-lost svg{filter:drop-shadow(0 0 12px rgba(255,40,60,.8)) drop-shadow(0 0 24px rgba(200,0,30,.4))}
+#ft-planet-grp{transition:filter .65s ease}
+.logo-orb.ws-lost #ft-planet-grp{filter:hue-rotate(240deg) saturate(1.4) brightness(1.1)}
 .ws-chip{font-family:var(--mono);font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   padding:2px 8px;border-radius:3px;margin-top:3px;text-align:center;transition:all .4s}
 .ws-chip.ok{color:#00d46a;border:1px solid rgba(0,212,106,.4)}
 .ws-chip.lost{color:#ff3c3c;border:1px solid rgba(255,60,60,.4);animation:ws-blink .8s ease-in-out infinite}
 @keyframes ws-blink{0%,100%{opacity:1}50%{opacity:.3}}
-.orb-scene{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.mystic-hand{display:flex;align-items:center}
-.mystic-hand svg{height:44px;width:auto;filter:drop-shadow(0 0 5px rgba(160,50,255,.65));animation:hand-glow 3s ease-in-out infinite}
-.mystic-hand-right svg{transform:scaleX(-1)}
-@keyframes hand-glow{0%,100%{opacity:.85;filter:drop-shadow(0 0 4px rgba(160,50,255,.5))}50%{opacity:1;filter:drop-shadow(0 0 8px rgba(200,80,255,.9))}}
 .logo-name{font-family:var(--horror);font-size:1.7rem;font-weight:400;letter-spacing:.06em;
   background:linear-gradient(160deg,#cc44ff 0%,#ff6a00 55%,#ff2244 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
@@ -318,79 +315,103 @@ input[type=file]{display:none}
 <header>
   <div class="hdr-top">
     <div class="logo" onclick="window.location.reload()">
-      <div class="orb-scene">
-        <div class="mystic-hand mystic-hand-left">
-          <svg viewBox="0 0 22 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 26 Q0 20 2 14 Q4 10 5 14 L5 26 Z" fill="#9030cc"/>
-            <rect x="6" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
-            <rect x="10.5" y="6" width="3.5" height="18" rx="1.75" fill="#9030cc"/>
-            <rect x="15" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
-            <rect x="18.5" y="13" width="3" height="11" rx="1.5" fill="#9030cc"/>
-            <path d="M5 22 Q4 32 6 38 Q10 44 12 44 Q17 44 20 40 Q22 35 21.5 24 Z" fill="#7020aa" opacity=".9"/>
-            <path d="M10 6 Q12 5 12 8" fill="none" stroke="rgba(220,160,255,.4)" stroke-width=".8" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="logo-orb" id="logo-orb" title="WebSocket status">
-        <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div class="logo-orb" id="logo-orb" title="WebSocket status">
+        <!-- Fortune-teller crystal ball: planet group (#ft-planet-grp) shifts green→red via CSS hue-rotate on disconnect -->
+        <svg id="ft-ball" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="orbbase" cx="38%" cy="32%" r="65%">
-              <stop offset="0%" stop-color="#e8aaff"/><stop offset="30%" stop-color="#9b30d0"/>
-              <stop offset="65%" stop-color="#4a0880"/><stop offset="100%" stop-color="#1a0030"/>
-            </radialGradient>
-            <radialGradient id="orbglow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#cc44ff" stop-opacity=".7"/>
-              <stop offset="60%" stop-color="#7700cc" stop-opacity=".2"/>
-              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="orbhot" cx="36%" cy="30%" r="40%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity=".9"/>
-              <stop offset="40%" stop-color="#e0aaff" stop-opacity=".4"/>
-              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="orbcore" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#ff6a00" stop-opacity=".9"/>
-              <stop offset="50%" stop-color="#cc2200" stop-opacity=".5"/>
-              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
-            </radialGradient>
-            <filter id="orbblur"><feGaussianBlur stdDeviation="1.2"/></filter>
-            <filter id="crackshadow"><feDropShadow dx="0" dy="0" stdDeviation=".6" flood-color="#ff6a00" flood-opacity=".9"/></filter>
+            <radialGradient id="fti" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#050e07"/><stop offset="70%" stop-color="#020704"/><stop offset="100%" stop-color="#010402"/></radialGradient>
+            <radialGradient id="ftg" cx="32%" cy="26%" r="52%"><stop offset="0%" stop-color="rgba(255,255,255,.12)"/><stop offset="55%" stop-color="rgba(200,255,220,.03)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+            <radialGradient id="ftp" cx="36%" cy="30%" r="65%"><stop offset="0%" stop-color="#c0ffd8"/><stop offset="30%" stop-color="#44dd88"/><stop offset="65%" stop-color="#1e8848"/><stop offset="100%" stop-color="#072a15"/></radialGradient>
+            <radialGradient id="ftn" cx="50%" cy="55%" r="50%"><stop offset="0%" stop-color="rgba(50,200,110,.28)"/><stop offset="60%" stop-color="rgba(20,100,55,.09)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+            <filter id="ftblur"><feGaussianBlur stdDeviation="2.5"/></filter>
+            <clipPath id="ftclip"><circle cx="100" cy="50" r="34"/></clipPath>
           </defs>
-          <circle cx="21" cy="21" r="20" fill="none" stroke="rgba(160,40,220,.25)" stroke-width="1.5">
-            <animate attributeName="r" values="19;21;19" dur="3s" repeatCount="indefinite"/>
-            <animate attributeName="stroke-opacity" values=".25;.05;.25" dur="3s" repeatCount="indefinite"/>
-          </circle>
-          <circle cx="21" cy="21" r="17" fill="url(#orbbase)"/>
-          <ellipse cx="21" cy="21" rx="15" ry="6" fill="none" stroke="rgba(180,80,255,.18)" stroke-width="2.5" transform="rotate(-25 21 21)"/>
-          <ellipse cx="21" cy="21" rx="12" ry="4" fill="none" stroke="rgba(220,120,255,.12)" stroke-width="1.5" transform="rotate(20 21 21)"/>
-          <ellipse cx="21" cy="21" rx="9" ry="3" fill="none" stroke="rgba(255,106,0,.15)" stroke-width="1" transform="rotate(-50 21 21)"/>
-          <circle cx="21" cy="22" r="5" fill="url(#orbcore)" opacity=".7" filter="url(#orbblur)"/>
-          <g filter="url(#crackshadow)" stroke="#ff6a00" stroke-linecap="round">
-            <path d="M21 19 L19 14 L20 11" stroke-width=".9" opacity=".85"/>
-            <path d="M23 20 L27 16 L29 13" stroke-width=".7" opacity=".7"/>
-            <path d="M22 23 L25 28 L24 31" stroke-width=".8" opacity=".8"/>
-            <path d="M19 22 L15 26 L13 30" stroke-width=".7" opacity=".65"/>
+
+          <!-- Background stars -->
+          <circle cx="18"  cy="12" r=".7" fill="rgba(180,255,200,.5)"/>
+          <circle cx="30"  cy="5"  r=".5" fill="rgba(180,255,200,.35)"/>
+          <circle cx="8"   cy="55" r=".6" fill="rgba(180,255,200,.4)"/>
+          <circle cx="183" cy="10" r=".7" fill="rgba(180,255,200,.5)"/>
+          <circle cx="196" cy="32" r=".5" fill="rgba(180,255,200,.35)"/>
+          <circle cx="172" cy="88" r=".6" fill="rgba(180,255,200,.4)"/>
+
+          <!-- ── Left skeletal hand (behind ball) ── -->
+          <g opacity=".9">
+            <path d="M48 67 Q46 80 48 93 Q53 101 62 99 Q70 97 72 86 L72 66" fill="#0c1410" stroke="rgba(100,180,120,.22)" stroke-width=".7"/>
+            <rect x="48"   y="35" width="6" height="32" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <rect x="55.5" y="27" width="6" height="39" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <rect x="63"   y="21" width="6" height="45" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <rect x="70.5" y="25" width="6" height="41" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <path d="M70 73 Q78 67 77 77 Q76 84 70 82" fill="#0c1410" stroke="rgba(100,180,120,.18)" stroke-width=".6"/>
+            <ellipse cx="51"   cy="65" rx="3.2" ry="1.8" fill="#121c14"/>
+            <ellipse cx="58.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
+            <ellipse cx="66"   cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
+            <ellipse cx="73.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
+            <rect x="55.5" y="57" width="6" height="3.5" rx="1.5" fill="rgba(200,180,40,.4)" stroke="rgba(230,210,80,.5)" stroke-width=".5"/>
           </g>
-          <circle cx="15" cy="14" r="5" fill="url(#orbhot)" opacity=".85"/>
-          <circle cx="21" cy="21" r="17" fill="none" stroke="rgba(220,160,255,.3)" stroke-width=".8"/>
-          <circle cx="21" cy="21" r="19" fill="url(#orbglow)"/>
-          <circle cx="21" cy="21" r="2.5" fill="#ff9a3c" opacity=".9">
-            <animate attributeName="r" values="2;3.5;2" dur="2s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values=".9;.3;.9" dur="2s" repeatCount="indefinite"/>
-          </circle>
+
+          <!-- ── Right skeletal hand (mirror of left) ── -->
+          <g opacity=".9" transform="translate(200,0) scale(-1,1)">
+            <path d="M48 67 Q46 80 48 93 Q53 101 62 99 Q70 97 72 86 L72 66" fill="#0c1410" stroke="rgba(100,180,120,.22)" stroke-width=".7"/>
+            <rect x="48"   y="35" width="6" height="32" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <rect x="55.5" y="27" width="6" height="39" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <rect x="63"   y="21" width="6" height="45" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <rect x="70.5" y="25" width="6" height="41" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
+            <path d="M70 73 Q78 67 77 77 Q76 84 70 82" fill="#0c1410" stroke="rgba(100,180,120,.18)" stroke-width=".6"/>
+            <ellipse cx="51"   cy="65" rx="3.2" ry="1.8" fill="#121c14"/>
+            <ellipse cx="58.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
+            <ellipse cx="66"   cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
+            <ellipse cx="73.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
+            <rect x="55.5" y="57" width="6" height="3.5" rx="1.5" fill="rgba(200,180,40,.4)" stroke="rgba(230,210,80,.5)" stroke-width=".5"/>
+          </g>
+
+          <!-- Ball dark interior (drawn before planet so planet renders on top) -->
+          <circle cx="100" cy="50" r="36" fill="url(#fti)"/>
+
+          <!-- ══ PLANET GROUP: outer ring + all interior green elements.
+               CSS applies hue-rotate(240deg) here on disconnect to shift green→red. ══ -->
+          <g id="ft-planet-grp">
+            <!-- Outer atmospheric breathing ring (NOT clipped) -->
+            <circle cx="100" cy="50" r="41" fill="none" stroke="rgba(40,200,100,.1)" stroke-width="3">
+              <animate attributeName="stroke-opacity" values=".1;.03;.1" dur="3.5s" repeatCount="indefinite"/>
+              <animate attributeName="r"              values="40;43;40"  dur="3.5s" repeatCount="indefinite"/>
+            </circle>
+            <!-- Interior: nebula + planet + rings (clipped to ball sphere) -->
+            <g clip-path="url(#ftclip)">
+              <ellipse cx="100" cy="54" rx="26" ry="18" fill="url(#ftn)" filter="url(#ftblur)"/>
+              <ellipse cx="90"  cy="46" rx="16" ry="10" fill="rgba(30,160,80,.1)"  filter="url(#ftblur)" transform="rotate(-18 90 46)"/>
+              <ellipse cx="112" cy="60" rx="14" ry="9"  fill="rgba(30,140,70,.08)" filter="url(#ftblur)" transform="rotate(20 112 60)"/>
+              <!-- Planet body -->
+              <ellipse cx="100" cy="48" rx="14" ry="12" fill="url(#ftp)"/>
+              <!-- Surface bands -->
+              <ellipse cx="100" cy="46" rx="14" ry="3.5" fill="none" stroke="rgba(120,255,170,.2)" stroke-width="1.2"/>
+              <ellipse cx="100" cy="52" rx="13" ry="3"   fill="none" stroke="rgba(80,210,130,.15)" stroke-width=".8"/>
+              <!-- Saturn ring system -->
+              <ellipse cx="100" cy="48" rx="24" ry="6"   fill="none" stroke="rgba(100,255,160,.4)" stroke-width="2.2"/>
+              <ellipse cx="100" cy="48" rx="20" ry="4.8" fill="none" stroke="rgba(60,210,120,.25)" stroke-width="1.2"/>
+              <!-- Ring shadow for depth -->
+              <path d="M79 50.5 Q100 56 121 50.5" fill="none" stroke="rgba(0,60,30,.45)" stroke-width="1"/>
+              <!-- Planet specular highlight -->
+              <ellipse cx="94" cy="43" rx="4" ry="3.5" fill="rgba(200,255,230,.18)"/>
+              <!-- Orbiting moon -->
+              <circle cx="118" cy="42" r="2" fill="rgba(140,255,180,.65)">
+                <animate attributeName="cx" values="118;116;118" dur="6s" repeatCount="indefinite"/>
+                <animate attributeName="cy" values="42;44;42"    dur="6s" repeatCount="indefinite"/>
+              </circle>
+              <!-- Sparkles -->
+              <circle cx="88"  cy="38" r=".8" fill="rgba(150,255,190,.45)"/>
+              <circle cx="113" cy="63" r=".7" fill="rgba(150,255,190,.38)"/>
+            </g>
+          </g>
+
+          <!-- Ball glass overlay (neutral — stays white/clear on disconnect) -->
+          <circle cx="100" cy="50" r="36" fill="url(#ftg)"/>
+          <circle cx="100" cy="50" r="36" fill="none" stroke="rgba(200,255,220,.15)" stroke-width=".8"/>
+          <!-- Specular highlights (neutral) -->
+          <ellipse cx="87" cy="36" rx="7" ry="4.5" fill="rgba(255,255,255,.07)" transform="rotate(-22 87 36)"/>
+          <circle  cx="80" cy="32" r="2" fill="rgba(255,255,255,.05)"/>
         </svg>
         <div class="ws-chip ok" id="ws-chip">LIVE</div>
-        </div>
-        <div class="mystic-hand mystic-hand-right">
-          <svg viewBox="0 0 22 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 26 Q0 20 2 14 Q4 10 5 14 L5 26 Z" fill="#9030cc"/>
-            <rect x="6" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
-            <rect x="10.5" y="6" width="3.5" height="18" rx="1.75" fill="#9030cc"/>
-            <rect x="15" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
-            <rect x="18.5" y="13" width="3" height="11" rx="1.5" fill="#9030cc"/>
-            <path d="M5 22 Q4 32 6 38 Q10 44 12 44 Q17 44 20 40 Q22 35 21.5 24 Z" fill="#7020aa" opacity=".9"/>
-            <path d="M10 6 Q12 5 12 8" fill="none" stroke="rgba(220,160,255,.4)" stroke-width=".8" stroke-linecap="round"/>
-          </svg>
-        </div>
       </div>
       <div>
         <div class="logo-name">LavaCast</div>
