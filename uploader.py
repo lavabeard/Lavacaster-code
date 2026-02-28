@@ -147,17 +147,21 @@ def process_upload(
         if codec == "copy":
             ip, port = manager.add_channel(
                 cid, src_path, filename,
-                pre_transcoded=False, src_path=src_path,
+                pre_transcoded=False, src_path=src_path, codec="copy",
             )
+            m = manager.metadata[cid]
             socketio.emit("channel_ready", {
                 "cid":      cid,
                 "filename": filename,
                 "ip":       ip,
                 "port":     port,
-                "encap":    "udp",
+                "encap":    m.get("encap", "udp"),
                 "bitrate":  manager.global_bitrate or "",
-                "loop":     True,
+                "loop":     m.get("loop", True),
                 "codec":    "copy",
+                "preset":   m.get("preset",   "fast"),
+                "vbitrate": m.get("vbitrate",  "6M"),
+                "abitrate": m.get("abitrate",  "192k"),
                 "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={ts}",
             })
         else:
@@ -178,7 +182,7 @@ def process_upload(
             def on_complete(cid, filepath):
                 ip, port = manager.add_channel(
                     cid, filepath, filename,
-                    pre_transcoded=True, src_path=src_path,
+                    pre_transcoded=True, src_path=src_path, codec=codec,
                 )
                 m = manager.metadata[cid]
                 socketio.emit("channel_ready", {
@@ -188,8 +192,11 @@ def process_upload(
                     "port":     port,
                     "encap":    m.get("encap", "udp"),
                     "bitrate":  m.get("bitrate", ""),
-                    "loop":     True,
+                    "loop":     m.get("loop", True),
                     "codec":    codec,
+                    "preset":   m.get("preset",   "fast"),
+                    "vbitrate": m.get("vbitrate",  "6M"),
+                    "abitrate": m.get("abitrate",  "192k"),
                     "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
                 })
 

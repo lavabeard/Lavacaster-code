@@ -25,20 +25,31 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
   backdrop-filter:blur(20px);border-bottom:1px solid var(--border2)}
 .hdr-top{display:flex;align-items:center;gap:12px;padding:6px 16px;min-height:60px;flex-wrap:wrap}
 
-.logo{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;text-decoration:none}
+.logo{display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;text-decoration:none}
 .logo-orb{flex-shrink:0}
-.ft-ball-wrap{display:inline-block}
-.ft-ball-img{height:52px;width:auto;display:block}
+.ft-ball-wrap{display:inline-block;position:relative}
+.ft-ball-wrap::before{content:'';position:absolute;inset:-16px;
+  background:radial-gradient(ellipse at center,
+    rgba(255,210,80,.65) 0%,rgba(255,110,20,.45) 28%,
+    rgba(140,30,220,.28) 52%,rgba(80,15,160,.1) 70%,transparent 85%);
+  border-radius:50%;pointer-events:none;z-index:0;
+  animation:orb-glow 3.8s ease-in-out infinite}
+@keyframes orb-glow{
+  0%,100%{opacity:.7;transform:scale(1)}
+  50%{opacity:1;transform:scale(1.12)}}
+.ft-ball-img{height:68px;width:auto;display:block;position:relative;z-index:1;
+  filter:drop-shadow(0 0 10px rgba(255,190,50,.7)) drop-shadow(0 0 22px rgba(200,70,10,.45))}
 .logo-text-col{display:flex;flex-direction:column;gap:2px}
 .ws-chip{font-family:var(--mono);font-size:.62rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   padding:2px 8px;border-radius:3px;text-align:center;transition:all .4s;display:inline-block}
 .ws-chip.ok{color:#22c55e;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
 .ws-chip.lost{color:#ff3c3c;border:1px solid rgba(255,60,60,.4);background:rgba(255,60,60,.08);animation:ws-blink .8s ease-in-out infinite}
 @keyframes ws-blink{0%,100%{opacity:1}50%{opacity:.3}}
-.logo-name{font-family:var(--horror);font-size:1.7rem;font-weight:400;letter-spacing:.06em;
-  background:linear-gradient(160deg,#22c55e 0%,#7c3aed 55%,#a78bfa 100%);
+.logo-name{font-family:var(--horror);font-size:1.9rem;font-weight:400;letter-spacing:.06em;
+  background:linear-gradient(160deg,#ffcc44 0%,#ff5500 30%,#9030e8 68%,#c088ff 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  filter:drop-shadow(0 0 10px rgba(124,58,237,.45));line-height:1;margin-bottom:1px}
+  filter:drop-shadow(0 0 16px rgba(255,130,20,.7)) drop-shadow(0 0 32px rgba(200,60,220,.3));
+  line-height:1;margin-bottom:1px}
 .logo-sub{font-family:var(--mono);font-size:.44rem;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
 
 .meters{display:flex;align-items:center;gap:14px;flex:1;padding:0 8px;flex-wrap:wrap}
@@ -920,7 +931,8 @@ socket.on('channel_ready',d=>{
   const s=state[d.cid];
   Object.assign(s,{filename:d.filename,ip:d.ip,port:d.port,
     encap:d.encap,bitrate:d.bitrate,loop:d.loop,
-    codec:d.codec||'copy',transcoding:false});
+    codec:d.codec||'copy',preset:d.preset||'fast',
+    vbitrate:d.vbitrate||'6M',abitrate:d.abitrate||'192k',transcoding:false});
   // Clear overlay
   document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
   document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
@@ -1068,17 +1080,21 @@ async function saveChSettings(){
   state[i].abitrate = document.getElementById('e-abr').value||'192k';
   state[i].encap    = document.getElementById('e-enc').value;
   state[i].loop     = document.getElementById('e-loop').checked;
-  // Push network settings to backend
+  // Push network + transcode profile settings to backend
   const body={
-    ip:     document.getElementById('e-ip').value.trim()||undefined,
-    port:   document.getElementById('e-port').value.trim()||undefined,
-    encap:  state[i].encap,
-    bitrate:document.getElementById('e-br').value,
-    loop:   state[i].loop
+    ip:       document.getElementById('e-ip').value.trim()||undefined,
+    port:     document.getElementById('e-port').value.trim()||undefined,
+    encap:    state[i].encap,
+    bitrate:  document.getElementById('e-br').value,
+    loop:     state[i].loop,
+    codec:    state[i].codec,
+    preset:   state[i].preset,
+    vbitrate: state[i].vbitrate,
+    abitrate: state[i].abitrate
   };
   const r=await fetch(`/api/channel/${i}/settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
-  if(d.meta){Object.assign(state[i],{ip:d.meta.ip,port:d.meta.port,encap:d.meta.encap,bitrate:d.meta.bitrate,loop:d.meta.loop});refreshCard(i);}
+  if(d.meta){Object.assign(state[i],{ip:d.meta.ip,port:d.meta.port,encap:d.meta.encap,bitrate:d.meta.bitrate,loop:d.meta.loop,codec:d.meta.codec||'copy',preset:d.meta.preset||'fast',vbitrate:d.meta.vbitrate||'6M',abitrate:d.meta.abitrate||'192k'});refreshCard(i);}
   closeMod('m-ch');
   toast(`CH${i+1} network settings saved`+(d.meta?.running?' — restarted':''));
   addActivity('info',`CH${i+1} settings saved`);
@@ -1180,7 +1196,8 @@ function syncStatus(){
       document.getElementById(`pct-${i}`).textContent='';
       document.getElementById(`eta-${i}`).textContent='';
       Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
+        preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
       refreshCard(i);
       document.getElementById(`bs-${i}`).disabled=false;
       const img=document.getElementById(`img-${i}`);
@@ -1216,7 +1233,8 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
   for(const[cs,m] of Object.entries(d.channels||{})){
     const i=parseInt(cs);
     Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
+      preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
     refreshCard(i);
     if(m.filename){
       document.getElementById(`bs-${i}`).disabled=false;
