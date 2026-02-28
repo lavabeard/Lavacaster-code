@@ -149,15 +149,19 @@ def process_upload(
                 cid, src_path, filename,
                 pre_transcoded=False, src_path=src_path,
             )
+            m = manager.metadata[cid]
             socketio.emit("channel_ready", {
                 "cid":      cid,
                 "filename": filename,
                 "ip":       ip,
                 "port":     port,
-                "encap":    "udp",
+                "encap":    m.get("encap", "udp"),
                 "bitrate":  manager.global_bitrate or "",
-                "loop":     True,
+                "loop":     m.get("loop", True),
                 "codec":    "copy",
+                "preset":   m.get("preset",   "fast"),
+                "vbitrate": m.get("vbitrate",  "6M"),
+                "abitrate": m.get("abitrate",  "192k"),
                 "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={ts}",
             })
         else:
@@ -188,8 +192,11 @@ def process_upload(
                     "port":     port,
                     "encap":    m.get("encap", "udp"),
                     "bitrate":  m.get("bitrate", ""),
-                    "loop":     True,
+                    "loop":     m.get("loop", True),
                     "codec":    codec,
+                    "preset":   m.get("preset",   "fast"),
+                    "vbitrate": m.get("vbitrate",  "6M"),
+                    "abitrate": m.get("abitrate",  "192k"),
                     "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
                 })
 

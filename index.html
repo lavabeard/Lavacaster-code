@@ -920,7 +920,8 @@ socket.on('channel_ready',d=>{
   const s=state[d.cid];
   Object.assign(s,{filename:d.filename,ip:d.ip,port:d.port,
     encap:d.encap,bitrate:d.bitrate,loop:d.loop,
-    codec:d.codec||'copy',transcoding:false});
+    codec:d.codec||'copy',preset:d.preset||'fast',
+    vbitrate:d.vbitrate||'6M',abitrate:d.abitrate||'192k',transcoding:false});
   // Clear overlay
   document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
   document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
@@ -1068,17 +1069,20 @@ async function saveChSettings(){
   state[i].abitrate = document.getElementById('e-abr').value||'192k';
   state[i].encap    = document.getElementById('e-enc').value;
   state[i].loop     = document.getElementById('e-loop').checked;
-  // Push network settings to backend
+  // Push network + transcode profile settings to backend
   const body={
-    ip:     document.getElementById('e-ip').value.trim()||undefined,
-    port:   document.getElementById('e-port').value.trim()||undefined,
-    encap:  state[i].encap,
-    bitrate:document.getElementById('e-br').value,
-    loop:   state[i].loop
+    ip:       document.getElementById('e-ip').value.trim()||undefined,
+    port:     document.getElementById('e-port').value.trim()||undefined,
+    encap:    state[i].encap,
+    bitrate:  document.getElementById('e-br').value,
+    loop:     state[i].loop,
+    preset:   state[i].preset,
+    vbitrate: state[i].vbitrate,
+    abitrate: state[i].abitrate
   };
   const r=await fetch(`/api/channel/${i}/settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
-  if(d.meta){Object.assign(state[i],{ip:d.meta.ip,port:d.meta.port,encap:d.meta.encap,bitrate:d.meta.bitrate,loop:d.meta.loop});refreshCard(i);}
+  if(d.meta){Object.assign(state[i],{ip:d.meta.ip,port:d.meta.port,encap:d.meta.encap,bitrate:d.meta.bitrate,loop:d.meta.loop,preset:d.meta.preset||'fast',vbitrate:d.meta.vbitrate||'6M',abitrate:d.meta.abitrate||'192k'});refreshCard(i);}
   closeMod('m-ch');
   toast(`CH${i+1} network settings saved`+(d.meta?.running?' — restarted':''));
   addActivity('info',`CH${i+1} settings saved`);
@@ -1180,7 +1184,8 @@ function syncStatus(){
       document.getElementById(`pct-${i}`).textContent='';
       document.getElementById(`eta-${i}`).textContent='';
       Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
+        preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
       refreshCard(i);
       document.getElementById(`bs-${i}`).disabled=false;
       const img=document.getElementById(`img-${i}`);
@@ -1216,7 +1221,8 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
   for(const[cs,m] of Object.entries(d.channels||{})){
     const i=parseInt(cs);
     Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
+      preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
     refreshCard(i);
     if(m.filename){
       document.getElementById(`bs-${i}`).disabled=false;
