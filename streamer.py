@@ -238,6 +238,7 @@ class StreamManager:
         filename: str,
         pre_transcoded: bool = False,
         src_path: str = None,
+        codec: str = "copy",
     ) -> tuple[str, int]:
         """Register or update a channel.  Returns (ip, port)."""
         ip   = self._auto_ip(cid)
@@ -266,6 +267,10 @@ class StreamManager:
             encap          = prev.get("encap", "udp"),
             bitrate        = self.global_bitrate or "",
             loop           = prev.get("loop", True),
+            codec          = codec,
+            preset         = prev.get("preset",   "fast"),
+            vbitrate       = prev.get("vbitrate",  "6M"),
+            abitrate       = prev.get("abitrate",  "192k"),
             running        = False,
             pre_transcoded = pre_transcoded,
             thumb          = f"/static/thumbnails/ch{cid}.jpg",
@@ -284,12 +289,15 @@ class StreamManager:
         self.metadata.pop(cid, None)
         logger.info(f"CH{cid + 1:02d} removed: {fname}")
 
+    _NET_KEYS = {"ip", "port", "encap", "bitrate", "loop", "nic"}
+
     def update_channel(self, cid: int, **kw) -> bool:
-        """Update network settings on an existing channel.  Returns was_running."""
+        """Update settings on an existing channel.  Returns was_running."""
         ch = self.channels.get(cid)
         if not ch:
             return False
-        was = ch.update_settings(**kw)
+        # update_settings only understands network-level keys
+        was = ch.update_settings(**{k: v for k, v in kw.items() if k in self._NET_KEYS})
         m   = self.metadata[cid]
         for k, v in kw.items():
             if k in m:
