@@ -40,7 +40,7 @@ for d in (ORIG_DIR, TRANS_DIR, THUMB_DIR):
 
 app = Flask(
     __name__,
-    template_folder=os.path.join(BASE_DIR, "frontend", "templates"),
+    template_folder=BASE_DIR,
     static_folder=os.path.join(BASE_DIR, "frontend", "static"),
 )
 app.config["SECRET_KEY"]         = "lavacast40-v8"
