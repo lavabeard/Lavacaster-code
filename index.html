@@ -200,7 +200,6 @@ input[type=file]{display:none}
 .pill{font-family:var(--mono);font-size:.46rem;font-weight:700;letter-spacing:.06em;padding:2px 4px;border-radius:2px;text-transform:uppercase}
 .p-addr  {background:rgba(68,136,255,.1);border:1px solid rgba(68,136,255,.2);color:var(--blue)}
 .p-enc   {background:var(--lava-dim);border:1px solid rgba(124,58,237,.25);color:var(--lava2)}
-.p-br    {background:rgba(255,204,68,.08);border:1px solid rgba(255,204,68,.2);color:var(--ember)}
 .p-codec {background:rgba(176,74,255,.1);border:1px solid rgba(176,74,255,.25);color:var(--purple)}
 
 .vlc-link{display:flex;align-items:center;gap:4px;margin-bottom:5px;font-family:var(--mono);
@@ -806,8 +805,7 @@ function cardHTML(i){
       <div class="pills">
         <span class="pill p-addr"  id="pa-${i}">—</span>
         <span class="pill p-enc"   id="pe-${i}">UDP</span>
-        <span class="pill p-br"    id="pbr-${i}">PASS</span>
-        <span class="pill p-codec" id="pco-${i}">COPY</span>
+        <span class="pill p-codec" id="pco-${i}">Passthrough</span>
       </div>
       <a class="vlc-link disabled" id="vlc-${i}" onclick="openVlc(${i})">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -997,8 +995,7 @@ async function removeCh(i){
   document.getElementById(`fn-${i}`).textContent='—';
   document.getElementById(`pa-${i}`).textContent='—';
   document.getElementById(`pe-${i}`).textContent='UDP';
-  document.getElementById(`pbr-${i}`).textContent='PASS';
-  document.getElementById(`pco-${i}`).textContent='COPY';
+  document.getElementById(`pco-${i}`).textContent='Passthrough';
   document.getElementById(`bs-${i}`).disabled=true;
   document.getElementById(`img-${i}`).style.display='none'; document.getElementById(`img-${i}`).src='';
   document.getElementById(`ph-${i}`).style.display='flex';
@@ -1015,8 +1012,8 @@ function refreshCard(i){
   if(s.filename) document.getElementById(`fn-${i}`).textContent=trunc(s.filename,24);
   document.getElementById(`pa-${i}`).textContent=s.ip?`${s.ip}:${s.port}`:'—';
   document.getElementById(`pe-${i}`).textContent=(s.encap||'udp').toUpperCase();
-  document.getElementById(`pbr-${i}`).textContent=s.bitrate||'PASS';
-  document.getElementById(`pco-${i}`).textContent=(s.codec||'copy').toUpperCase();
+  const _c=s.codec||'copy';
+  document.getElementById(`pco-${i}`).textContent=_c==='h264'?'H.264':_c==='h265'?'H.265':'Passthrough';
   document.getElementById(`bl-${i}`).classList.toggle('loop-on',s.loop!==false);
   updateVlcLink(i);
 }

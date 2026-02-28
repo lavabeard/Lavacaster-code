@@ -143,7 +143,10 @@ class StreamChannel:
             url = f"udp://{self.ip}:{self.port}?{params}"
             fmt = "mpegts"
 
-        cmd = ["ffmpeg", "-re", "-i", self.filepath]
+        cmd = ["ffmpeg", "-re"]
+        if self.loop:
+            cmd += ["-stream_loop", "-1"]
+        cmd += ["-i", self.filepath]
         if self.pre_transcoded or not self.bitrate:
             cmd += ["-c", "copy"]
         else:
@@ -176,22 +179,17 @@ class StreamChannel:
         return 4000
 
     def _run(self, on_stop):
-        loops = 0
-        while self.running:
-            try:
-                self.process = subprocess.Popen(
-                    self._build_cmd(),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                self.process.wait()
-                loops += 1
-            except Exception as e:
-                logger.error(f"CH{self.cid + 1:02d} FFmpeg: {e}")
-            if not self.loop:
-                break
+        try:
+            self.process = subprocess.Popen(
+                self._build_cmd(),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            self.process.wait()
+        except Exception as e:
+            logger.error(f"CH{self.cid + 1:02d} FFmpeg: {e}")
         self.running = False
-        logger.stream(f"CH{self.cid + 1:02d} stopped", {"loops": loops})
+        logger.stream(f"CH{self.cid + 1:02d} stopped")
         if on_stop:
             on_stop(self.cid)
 
