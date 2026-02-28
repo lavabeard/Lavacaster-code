@@ -16,10 +16,8 @@ import fcntl
 import subprocess
 import threading
 
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-import shared.logger as logger
-from transcoding.transcoder import TranscodeJob
+import logger
+from transcoder import TranscodeJob
 
 # ---------------------------------------------------------------------------
 # Bitrate preset list (used by UI and upload layer)
