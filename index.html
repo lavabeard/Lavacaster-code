@@ -946,7 +946,8 @@ socket.on('stream_stopped',d=>{ state[d.cid].running=false; setStop(d.cid); upda
 socket.on('stream_restarted',d=>{ state[d.cid].running=true; setRun(d.cid); updateStats(); addActivity('stream',`CH${d.cid+1} restarted`); });
 socket.on('all_stopped',()=>{ for(let i=0;i<MAX;i++){state[i].running=false;setStop(i);} updateStats(); addActivity('stream','All streams stopped'); });
 
-socket.on('metrics',d=>{
+function applyMetrics(d){
+  if(!d||d.cpu===undefined) return;
   const cpu=parseFloat(d.cpu)||0;
   document.getElementById('cpu-val').innerHTML=cpu.toFixed(1)+'<span class="u">%</span>';
   const cb=document.getElementById('cpu-bar'); cb.style.width=Math.min(cpu,100)+'%'; cb.classList.toggle('hot',cpu>85);
@@ -958,7 +959,15 @@ socket.on('metrics',d=>{
     if(!nicReady){ sel.innerHTML=''; Object.keys(d.nics).forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;sel.appendChild(o);}); selMonitorNic=sel.value; nicReady=true; }
     nicCache=d.nics; renderNic();
   }
-});
+}
+
+socket.on('metrics', applyMetrics);
+
+async function fetchMetrics(){
+  try{ const d=await (await fetch('/api/metrics')).json(); applyMetrics(d); }catch(e){}
+}
+fetchMetrics();
+setInterval(fetchMetrics, 5000);
 
 function renderNic(){
   if(!selMonitorNic||!nicCache[selMonitorNic]) return;

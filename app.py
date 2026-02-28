@@ -66,11 +66,15 @@ GLOBAL_TC = {
 # Background: metrics loop (real OS thread — safe under eventlet)
 # ---------------------------------------------------------------------------
 
+_last_metrics: dict = {}
+
 def _metrics_loop():
     logger.system("Metrics thread started (real OS thread, reads /proc)")
     while True:
         try:
-            socketio.emit("metrics", collect(interval=1.0))
+            data = collect(interval=5.0)
+            _last_metrics.update(data)
+            socketio.emit("metrics", data)
         except Exception as e:
             logger.error(f"Metrics error: {e}")
 
@@ -93,6 +97,12 @@ def index():
 # ---------------------------------------------------------------------------
 # Routes — Status / Config
 # ---------------------------------------------------------------------------
+
+@app.route("/api/metrics")
+def metrics_api():
+    """Return the most recently sampled system metrics (updated every ~5 s)."""
+    return jsonify(_last_metrics)
+
 
 @app.route("/api/status")
 def status():
