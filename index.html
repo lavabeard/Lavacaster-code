@@ -29,11 +29,16 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .logo-orb{width:42px;height:42px;flex-shrink:0;position:relative}
 .logo-orb svg{width:42px;height:42px;filter:drop-shadow(0 0 8px rgba(180,60,255,.5));transition:filter .5s}
 .logo-orb.ws-lost svg{filter:drop-shadow(0 0 8px rgba(255,40,40,.7)) hue-rotate(75deg) saturate(1.6)}
-.ws-chip{font-family:var(--mono);font-size:.38rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-  padding:1px 4px;border-radius:2px;margin-top:2px;text-align:center;transition:all .4s}
+.ws-chip{font-family:var(--mono);font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  padding:2px 8px;border-radius:3px;margin-top:3px;text-align:center;transition:all .4s}
 .ws-chip.ok{color:#00d46a;border:1px solid rgba(0,212,106,.4)}
 .ws-chip.lost{color:#ff3c3c;border:1px solid rgba(255,60,60,.4);animation:ws-blink .8s ease-in-out infinite}
 @keyframes ws-blink{0%,100%{opacity:1}50%{opacity:.3}}
+.orb-scene{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.mystic-hand{display:flex;align-items:center}
+.mystic-hand svg{height:44px;width:auto;filter:drop-shadow(0 0 5px rgba(160,50,255,.65));animation:hand-glow 3s ease-in-out infinite}
+.mystic-hand-right svg{transform:scaleX(-1)}
+@keyframes hand-glow{0%,100%{opacity:.85;filter:drop-shadow(0 0 4px rgba(160,50,255,.5))}50%{opacity:1;filter:drop-shadow(0 0 8px rgba(200,80,255,.9))}}
 .logo-name{font-family:var(--horror);font-size:1.7rem;font-weight:400;letter-spacing:.06em;
   background:linear-gradient(160deg,#cc44ff 0%,#ff6a00 55%,#ff2244 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
@@ -313,7 +318,19 @@ input[type=file]{display:none}
 <header>
   <div class="hdr-top">
     <div class="logo" onclick="window.location.reload()">
-      <div class="logo-orb" id="logo-orb" title="WebSocket status">
+      <div class="orb-scene">
+        <div class="mystic-hand mystic-hand-left">
+          <svg viewBox="0 0 22 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 26 Q0 20 2 14 Q4 10 5 14 L5 26 Z" fill="#9030cc"/>
+            <rect x="6" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
+            <rect x="10.5" y="6" width="3.5" height="18" rx="1.75" fill="#9030cc"/>
+            <rect x="15" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
+            <rect x="18.5" y="13" width="3" height="11" rx="1.5" fill="#9030cc"/>
+            <path d="M5 22 Q4 32 6 38 Q10 44 12 44 Q17 44 20 40 Q22 35 21.5 24 Z" fill="#7020aa" opacity=".9"/>
+            <path d="M10 6 Q12 5 12 8" fill="none" stroke="rgba(220,160,255,.4)" stroke-width=".8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="logo-orb" id="logo-orb" title="WebSocket status">
         <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="orbbase" cx="38%" cy="32%" r="65%">
@@ -362,6 +379,18 @@ input[type=file]{display:none}
           </circle>
         </svg>
         <div class="ws-chip ok" id="ws-chip">LIVE</div>
+        </div>
+        <div class="mystic-hand mystic-hand-right">
+          <svg viewBox="0 0 22 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 26 Q0 20 2 14 Q4 10 5 14 L5 26 Z" fill="#9030cc"/>
+            <rect x="6" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
+            <rect x="10.5" y="6" width="3.5" height="18" rx="1.75" fill="#9030cc"/>
+            <rect x="15" y="9" width="3.5" height="15" rx="1.75" fill="#9030cc"/>
+            <rect x="18.5" y="13" width="3" height="11" rx="1.5" fill="#9030cc"/>
+            <path d="M5 22 Q4 32 6 38 Q10 44 12 44 Q17 44 20 40 Q22 35 21.5 24 Z" fill="#7020aa" opacity=".9"/>
+            <path d="M10 6 Q12 5 12 8" fill="none" stroke="rgba(220,160,255,.4)" stroke-width=".8" stroke-linecap="round"/>
+          </svg>
+        </div>
       </div>
       <div>
         <div class="logo-name">LavaCast</div>
