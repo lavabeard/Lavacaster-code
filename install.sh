@@ -58,9 +58,29 @@ if [ -d "$BACKUP_DIR" ]; then
 fi
 
 if [ -d "$INSTALL_DIR" ]; then
-  warn "Existing install found — backing up to $(basename "$BACKUP_DIR")"
-  # Stop the service so nothing is actively writing
+  echo ""
+  warn "Existing LavaCast 40 installation found at $INSTALL_DIR"
+  echo -e "  ${ORANGE}This will stop the running service, back up the current install,"
+  echo -e "  pull the latest code from the repository, and reinstall dependencies.${NC}"
+  echo ""
+  read -rp "$(echo -e "${ORANGE}${BOLD}Upgrade existing installation? [y/N]: ${NC}")" _confirm_upgrade
+  if [[ ! "$_confirm_upgrade" =~ ^[Yy]$ ]]; then
+    echo -e "\n${RED}Upgrade cancelled. Existing installation unchanged.${NC}\n"
+    exit 0
+  fi
+
+  # Shut down service and wait for it to fully stop before touching files
+  warn "Stopping LavaCast 40 service..."
   sudo systemctl stop "${SERVICE_NAME}.service" 2>/dev/null || true
+  for _i in {1..15}; do
+    sudo systemctl is-active --quiet "${SERVICE_NAME}.service" 2>/dev/null || break
+    sleep 1
+  done
+  # Also kill any stray python processes still running app.py
+  pkill -f "$INSTALL_DIR/app.py" 2>/dev/null || true
+  sleep 1
+  log "Service stopped."
+
   # Move media out first so videos stay in lavacast40 after the update
   if [ -d "$INSTALL_DIR/media" ]; then
     mv "$INSTALL_DIR/media" /tmp/lavacast40_media_save
