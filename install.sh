@@ -81,20 +81,28 @@ if [ -d "$INSTALL_DIR" ]; then
   sleep 1
   log "Service stopped."
 
-  # Move media out first so videos stay in lavacast40 after the update
+  # Preserve user-editable files before the backup rotation
   if [ -d "$INSTALL_DIR/media" ]; then
     mv "$INSTALL_DIR/media" /tmp/lavacast40_media_save
     log "Media saved temporarily (will be restored after clone)"
+  fi
+  if [ -f "$INSTALL_DIR/lavacast.config.json" ]; then
+    cp "$INSTALL_DIR/lavacast.config.json" /tmp/lavacast40_config_save.json
+    log "lavacast.config.json saved temporarily (will be restored after clone)"
   fi
   # Rotate old install to dated backup folder
   mv "$INSTALL_DIR" "$BACKUP_DIR"
   log "Old install → $BACKUP_DIR"
   # Fresh clone
   git clone "$REPO_URL" "$INSTALL_DIR"
-  # Put media back so videos stay at the real lavacast40 path
+  # Restore preserved files
   if [ -d /tmp/lavacast40_media_save ]; then
     mv /tmp/lavacast40_media_save "$INSTALL_DIR/media"
     log "Media restored → $INSTALL_DIR/media/"
+  fi
+  if [ -f /tmp/lavacast40_config_save.json ]; then
+    mv /tmp/lavacast40_config_save.json "$INSTALL_DIR/lavacast.config.json"
+    log "lavacast.config.json restored (your custom settings kept)"
   fi
   log "Code updated from repository."
 else
