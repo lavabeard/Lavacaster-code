@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>LavaCast 40 v8</title>
+<title>LavaCast</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Rubik:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Creepster&family=Rubik:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
 <style>
 :root{
@@ -35,10 +35,20 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .ws-chip.ok{color:#22c55e;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
 .ws-chip.lost{color:#ff3c3c;border:1px solid rgba(255,60,60,.4);background:rgba(255,60,60,.08);animation:ws-blink .8s ease-in-out infinite}
 @keyframes ws-blink{0%,100%{opacity:1}50%{opacity:.3}}
-.logo-name{font-family:var(--horror);font-size:1.7rem;font-weight:400;letter-spacing:.06em;
-  background:linear-gradient(160deg,#22c55e 0%,#7c3aed 55%,#a78bfa 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  filter:drop-shadow(0 0 10px rgba(124,58,237,.45));line-height:1;margin-bottom:1px}
+.logo-name{font-family:'Bebas Neue','Impact',sans-serif;font-size:2.1rem;font-weight:400;
+  letter-spacing:.18em;text-transform:uppercase;color:#f2e8d8;
+  text-shadow:
+    0 0 6px rgba(255,240,220,.35),
+    0 1px 1px #aa0000,
+    0 3px 7px rgba(200,0,0,.9),
+    0 7px 20px rgba(175,0,0,.65),
+    0 14px 40px rgba(130,0,0,.35);
+  line-height:1;margin-bottom:1px;
+  animation:thing-flicker 14s ease-in-out infinite}
+@keyframes thing-flicker{
+  0%,86%,100%{opacity:1}
+  87%{opacity:.78}88%{opacity:1}
+  92%{opacity:.88}93%{opacity:1}}
 .logo-sub{font-family:var(--mono);font-size:.44rem;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
 
 .meters{display:flex;align-items:center;gap:14px;flex:1;padding:0 8px;flex-wrap:wrap}
@@ -340,8 +350,8 @@ input[type=file]{display:none}
         </div>
       </div>
       <div class="logo-text-col">
-        <div class="logo-name">LavaCast</div>
-        <div class="logo-sub">40-Ch · H.264 / H.265 Transcode</div>
+        <div class="logo-name">LAVACAST</div>
+        <div class="logo-sub">H.264 / H.265 · Multicast</div>
         <div class="ws-chip ok" id="ws-chip">LIVE</div>
       </div>
     </div>
@@ -441,7 +451,7 @@ input[type=file]{display:none}
     <div class="sec-hdr">
       <span class="sec-lbl">Stream Channels</span>
       <div class="sec-line"></div>
-      <span class="sec-lbl">40 CH · UDP / RTP · H.264 / H.265 · Global Transcode</span>
+      <span class="sec-lbl">UDP / RTP · H.264 / H.265 · Global Transcode</span>
     </div>
     <div class="grid" id="grid"></div>
   </div>
@@ -487,11 +497,11 @@ input[type=file]{display:none}
 <!-- SETTINGS MODAL -->
 <div class="mbg" id="m-settings">
   <div class="modal">
-    <div class="modal-title">LavaCast 40 Settings</div>
+    <div class="modal-title">LavaCast Settings</div>
     <div class="stag">Media Storage</div>
     <div class="fg">
       <label class="fl">Media Directory (parent)</label>
-      <input class="fi" id="cfg-path" placeholder="/home/user/lavacast40/media">
+      <input class="fi" id="cfg-path" placeholder="/home/user/lavacast/media">
       <div class="fhint">Originals saved to media/originals/ · Transcoded to media/transcoded/</div>
     </div>
     <div class="divider"></div>
