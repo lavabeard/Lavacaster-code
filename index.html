@@ -28,17 +28,7 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .logo{display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;text-decoration:none}
 .logo-orb{flex-shrink:0}
 .ft-ball-wrap{display:inline-block;position:relative}
-.ft-ball-wrap::before{content:'';position:absolute;inset:-16px;
-  background:radial-gradient(ellipse at center,
-    rgba(255,210,80,.65) 0%,rgba(255,110,20,.45) 28%,
-    rgba(140,30,220,.28) 52%,rgba(80,15,160,.1) 70%,transparent 85%);
-  border-radius:50%;pointer-events:none;z-index:0;
-  animation:orb-glow 3.8s ease-in-out infinite}
-@keyframes orb-glow{
-  0%,100%{opacity:.7;transform:scale(1)}
-  50%{opacity:1;transform:scale(1.12)}}
-.ft-ball-img{height:68px;width:auto;display:block;position:relative;z-index:1;
-  filter:drop-shadow(0 0 10px rgba(255,190,50,.7)) drop-shadow(0 0 22px rgba(200,70,10,.45))}
+.ft-ball-img{height:68px;width:auto;display:block;position:relative;z-index:1}
 .logo-text-col{display:flex;flex-direction:column;gap:2px}
 .ws-chip{font-family:var(--mono);font-size:.62rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   padding:2px 8px;border-radius:3px;text-align:center;transition:all .4s;display:inline-block}
@@ -1205,7 +1195,7 @@ function syncStatus(){
       const tw=document.getElementById(`tw-${i}`);
       img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
       img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-      img.src=m.thumb+'?t='+Date.now();
+      img.src='/api/thumbnail/'+i+'?t='+Date.now();
       if(m.running) setRun(i); else setStop(i);
     }
     updateStats();
@@ -1243,7 +1233,7 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
       const tw=document.getElementById(`tw-${i}`);
       img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
       img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-      img.src=m.thumb+'?t='+Date.now();
+      img.src='/api/thumbnail/'+i+'?t='+Date.now();
     }
     if(m.running) setRun(i);
   }
