@@ -109,6 +109,7 @@ def process_upload(
     global_tc: dict,
     manager,                # StreamManager instance
     socketio,               # Flask-SocketIO instance
+    overwrite: bool = False,
 ):
     """
     Save the uploaded file, then run thumbnail + transcode/copy pipeline.
@@ -116,13 +117,15 @@ def process_upload(
     Called from the Flask route; heavy work is pushed to a daemon thread
     so the HTTP response returns immediately.
 
-    Returns (True, None) on success, (False, error_msg) on validation fail.
+    Returns ("ok", None)       on success (pipeline queued)
+            ("exists", name)   when file already exists and overwrite=False
+            ("error", msg)     on validation failure
     """
     filename = file_storage.filename
     ext      = os.path.splitext(filename)[1].lower()
 
     if ext not in ALLOWED_EXTENSIONS:
-        return False, f"Unsupported file type: {ext}"
+        return "error", f"Unsupported file type: {ext}"
 
     codec      = global_tc.get("codec",      "h264")
     preset     = global_tc.get("preset",     "fast")
@@ -131,17 +134,21 @@ def process_upload(
     resolution = global_tc.get("resolution", "1080p")
     fps        = global_tc.get("fps",        "original")
 
-    src_path = os.path.join(orig_dir, f"CH{cid + 1:02d}_{filename}")
+    # Originals keep the original filename unchanged (no channel prefix)
+    src_path = os.path.join(orig_dir, filename)
 
-    if os.path.exists(src_path):
-        logger.info(f"CH{cid + 1:02d} reusing existing file: {filename}")
-    else:
-        file_storage.save(src_path)
-        size_mb = round(os.path.getsize(src_path) / 1_048_576, 1)
-        logger.info(
-            f"CH{cid + 1:02d} uploaded: {filename}",
-            {"size_mb": size_mb, "codec": codec},
-        )
+    if os.path.exists(src_path) and not overwrite:
+        return "exists", filename
+
+    file_storage.save(src_path)
+    size_mb = round(os.path.getsize(src_path) / 1_048_576, 1)
+    logger.info(
+        f"CH{cid + 1:02d} uploaded: {filename}",
+        {"size_mb": size_mb, "codec": codec},
+    )
+
+    # Transcoded output carries the channel prefix + original stem
+    stem     = os.path.splitext(filename)[0]
 
     def _pipeline():
         generate_thumbnail(src_path, cid, thumb_dir)
@@ -168,7 +175,7 @@ def process_upload(
                 "thumb":    f"/api/thumbnail/{cid}?t={ts}",
             })
         else:
-            dst_path = os.path.join(trans_dir, f"ch{cid}.ts")
+            dst_path = os.path.join(trans_dir, f"CH{cid + 1:02d}_{stem}.ts")
             socketio.emit("transcode_start", {
                 "cid":    cid,
                 "codec":  codec,
@@ -213,4 +220,4 @@ def process_upload(
             )
 
     threading.Thread(target=_pipeline, daemon=True).start()
-    return True, None
+    return "ok", None

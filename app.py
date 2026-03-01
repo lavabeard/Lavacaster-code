@@ -196,13 +196,18 @@ def upload(cid):
     if tc["resolution"] not in VALID_RESOLUTIONS: tc["resolution"] = "original"
     if tc["fps"]        not in VALID_FPS:         tc["fps"]        = "original"
 
-    ok, err = process_upload(
+    overwrite = request.form.get("overwrite", "false").lower() == "true"
+
+    status, data = process_upload(
         cid, f,
         ORIG_DIR, TRANS_DIR, THUMB_DIR,
         tc, manager, socketio,
+        overwrite=overwrite,
     )
-    if not ok:
-        return jsonify({"error": err}), 400
+    if status == "error":
+        return jsonify({"error": data}), 400
+    if status == "exists":
+        return jsonify({"exists": True, "filename": data}), 409
     return jsonify({"status": "uploading"})
 
 
