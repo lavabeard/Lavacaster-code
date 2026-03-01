@@ -351,11 +351,9 @@ def get_thumbnail(cid):
     path = os.path.join(THUMB_DIR, f"ch{cid}.jpg")
     if not os.path.exists(path):
         return jsonify({"error": "not found"}), 404
-    return send_from_directory(
-        THUMB_DIR, f"ch{cid}.jpg",
-        max_age=0,
-        headers={"Cache-Control": "no-store"},
-    )
+    resp = send_from_directory(THUMB_DIR, f"ch{cid}.jpg", max_age=0)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 # ---------------------------------------------------------------------------
