@@ -245,24 +245,31 @@ def retranscode(cid):
         manager.add_channel(
             cid, src_path, meta["filename"],
             pre_transcoded=False, src_path=src_path,
+            codec="copy", preset=preset,
+            vbitrate=vbitrate, abitrate=abitrate,
         )
+        m = manager.metadata[cid]
         socketio.emit("channel_ready", {
             "cid":      cid,
             "filename": meta["filename"],
-            "ip":       meta["ip"],
-            "port":     meta["port"],
-            "encap":    meta.get("encap", "udp"),
-            "bitrate":  meta.get("bitrate", ""),
-            "loop":     meta.get("loop", True),
+            "ip":       m["ip"],
+            "port":     m["port"],
+            "encap":    m.get("encap", "udp"),
+            "bitrate":  m.get("bitrate", ""),
+            "loop":     m.get("loop", True),
             "codec":    "copy",
-            "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
+            "preset":   preset,
+            "vbitrate": vbitrate,
+            "abitrate": abitrate,
+            "thumb":    f"/api/thumbnail/{cid}?t={time.time()}",
         })
         if was_running:
             manager.start(cid, on_stop=_on_stop)
         logger.info(f"CH{cid + 1:02d} switched to copy (passthrough)")
         return jsonify({"status": "switched_to_copy"})
 
-    dst_path = os.path.join(TRANS_DIR, f"ch{cid}.ts")
+    stem     = os.path.splitext(meta["filename"])[0]
+    dst_path = os.path.join(TRANS_DIR, f"CH{cid + 1:02d}_{stem}.ts")
     socketio.emit("transcode_start", {"cid": cid, "codec": codec, "preset": preset})
 
     def on_progress(cid, pct, eta_secs=0):
@@ -272,6 +279,8 @@ def retranscode(cid):
         manager.add_channel(
             cid, filepath, meta["filename"],
             pre_transcoded=True, src_path=src_path,
+            codec=codec, preset=preset,
+            vbitrate=vbitrate, abitrate=abitrate,
         )
         m = manager.metadata[cid]
         socketio.emit("channel_ready", {
@@ -283,7 +292,10 @@ def retranscode(cid):
             "bitrate":  m.get("bitrate", ""),
             "loop":     m.get("loop", True),
             "codec":    codec,
-            "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
+            "preset":   preset,
+            "vbitrate": vbitrate,
+            "abitrate": abitrate,
+            "thumb":    f"/api/thumbnail/{cid}?t={time.time()}",
         })
         if was_running:
             manager.start(cid, on_stop=_on_stop)

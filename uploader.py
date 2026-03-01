@@ -157,7 +157,9 @@ def process_upload(
         if codec == "copy":
             ip, port = manager.add_channel(
                 cid, src_path, filename,
-                pre_transcoded=False, src_path=src_path, codec="copy",
+                pre_transcoded=False, src_path=src_path,
+                codec="copy", preset=preset,
+                vbitrate=vbitrate, abitrate=abitrate,
             )
             m = manager.metadata[cid]
             socketio.emit("channel_ready", {
@@ -169,9 +171,9 @@ def process_upload(
                 "bitrate":  manager.global_bitrate or "",
                 "loop":     m.get("loop", True),
                 "codec":    "copy",
-                "preset":   m.get("preset",   "fast"),
-                "vbitrate": m.get("vbitrate",  "6M"),
-                "abitrate": m.get("abitrate",  "192k"),
+                "preset":   preset,
+                "vbitrate": vbitrate,
+                "abitrate": abitrate,
                 "thumb":    f"/api/thumbnail/{cid}?t={ts}",
             })
         else:
@@ -193,6 +195,8 @@ def process_upload(
                 ip, port = manager.add_channel(
                     cid, filepath, filename,
                     pre_transcoded=True, src_path=src_path,
+                    codec=codec, preset=preset,
+                    vbitrate=vbitrate, abitrate=abitrate,
                 )
                 m = manager.metadata[cid]
                 socketio.emit("channel_ready", {
@@ -202,11 +206,11 @@ def process_upload(
                     "port":     port,
                     "encap":    m.get("encap", "udp"),
                     "bitrate":  m.get("bitrate", ""),
-                    "loop":     True,
+                    "loop":     m.get("loop", True),
                     "codec":    codec,
-                    "preset":   m.get("preset",   "fast"),
-                    "vbitrate": m.get("vbitrate",  "6M"),
-                    "abitrate": m.get("abitrate",  "192k"),
+                    "preset":   preset,
+                    "vbitrate": vbitrate,
+                    "abitrate": abitrate,
                     "thumb":    f"/api/thumbnail/{cid}?t={time.time()}",
                 })
 

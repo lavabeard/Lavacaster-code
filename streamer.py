@@ -295,6 +295,10 @@ class StreamManager:
         filename: str,
         pre_transcoded: bool = False,
         src_path: str = None,
+        codec: str = "copy",
+        preset: str = "fast",
+        vbitrate: str = "6M",
+        abitrate: str = "192k",
     ) -> tuple[str, int]:
         """Register or update a channel.  Returns (ip, port)."""
         ip   = self._auto_ip(cid)
@@ -326,6 +330,10 @@ class StreamManager:
             running        = False,
             pre_transcoded = pre_transcoded,
             thumb          = f"/static/thumbnails/ch{cid}.jpg",
+            codec          = codec,
+            preset         = preset,
+            vbitrate       = vbitrate,
+            abitrate       = abitrate,
         )
         logger.info(
             f"CH{cid + 1:02d} loaded: {filename}",
@@ -344,15 +352,21 @@ class StreamManager:
         self._save_state()
 
     def update_channel(self, cid: int, **kw) -> bool:
-        """Update network settings on an existing channel.  Returns was_running."""
+        """Update channel settings.  TC-only changes never restart the stream.
+        Returns was_running (True if a stream restart is needed)."""
         ch = self.channels.get(cid)
         if not ch:
             return False
-        was = ch.update_settings(**kw)
-        m   = self.metadata[cid]
+
+        # Transcode prefs are stored in metadata only — not passed to StreamChannel
+        _TC = {"codec", "preset", "vbitrate", "abitrate"}
+        net_kw = {k: v for k, v in kw.items() if k not in _TC and v is not None}
+        was = ch.update_settings(**net_kw) if net_kw else False
+
+        m = self.metadata.get(cid, {})
         for k, v in kw.items():
-            if k in m:
-                m[k] = int(v) if k == "port" else (v or "")
+            if k in m or k in _TC:
+                m[k] = int(v) if k == "port" else (v if v is not None else "")
         self._save_state()
         return was
 

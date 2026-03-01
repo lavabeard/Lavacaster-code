@@ -150,7 +150,7 @@ input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
 .up-ov{position:absolute;inset:0;background:rgba(8,8,10,.93);display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:8px;
   opacity:0;pointer-events:none;transition:opacity .2s}
-.uploading .up-ov,.transcoding .up-ov{opacity:1;pointer-events:all}
+.uploading .up-ov{opacity:1;pointer-events:all}
 .up-lbl{font-family:var(--mono);font-size:.54rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 .up-lbl.phase-upload{color:var(--lava2)}
 .up-lbl.phase-tc{color:var(--purple)}
@@ -186,6 +186,18 @@ input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
   padding:2px 5px;border-radius:2px;display:none;text-transform:uppercase}
 .transcoding .tc-badge{display:block;animation:tcpulse 1s ease-in-out infinite}
 @keyframes tcpulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Transcode progress — overlaid on thumbnail, doesn't hide it */
+.tc-prog{position:absolute;bottom:0;left:0;right:0;height:4px;
+  background:rgba(255,255,255,.08);display:none}
+.transcoding .tc-prog{display:block}
+.tc-prog-fill{height:100%;width:0%;
+  background:linear-gradient(90deg,var(--purple),#ff6ec7);
+  transition:width .1s linear}
+.tc-pct-lbl{position:absolute;bottom:8px;right:6px;
+  font-family:var(--mono);font-size:.52rem;color:#fff;
+  background:rgba(0,0,0,.65);padding:2px 5px;border-radius:3px;display:none}
+.transcoding .tc-pct-lbl{display:block}
 
 input[type=file]{display:none}
 
@@ -789,6 +801,8 @@ function cardHTML(i){
         <span class="pb-pct" id="pct-${i}">0%</span>
         <span class="up-eta" id="eta-${i}"></span>
       </div>
+      <div class="tc-prog" id="tcp-${i}"><div class="tc-prog-fill" id="tcf-${i}"></div></div>
+      <span class="tc-pct-lbl" id="tcpct-${i}"></span>
       <div class="hover-load">
         <label class="mini-btn" onclick="event.stopPropagation();triggerUp(${i})">⬆ Load</label>
       </div>
@@ -845,11 +859,11 @@ function uploadFile(i,inp,overwrite=false){
   tw.classList.add('uploading');
 
   const fd=new FormData(); fd.append('file',file);
-  // Use global transcode profile for every upload
-  fd.append('codec',      globalTC.codec);
-  fd.append('preset',     globalTC.preset);
-  fd.append('vbitrate',   globalTC.vbitrate);
-  fd.append('abitrate',   globalTC.abitrate);
+  // Per-channel codec prefs override the global profile; resolution/fps always global
+  fd.append('codec',      state[i].codec    || globalTC.codec);
+  fd.append('preset',     state[i].preset   || globalTC.preset);
+  fd.append('vbitrate',   state[i].vbitrate || globalTC.vbitrate);
+  fd.append('abitrate',   state[i].abitrate || globalTC.abitrate);
   fd.append('resolution', globalTC.resolution);
   fd.append('fps',        globalTC.fps);
   fd.append('overwrite',  overwrite ? 'true' : 'false');
@@ -896,36 +910,28 @@ function uploadFile(i,inp,overwrite=false){
 // ── Socket events ─────────────────────────────────────────────────────────────
 socket.on('transcode_start',d=>{
   state[d.cid].transcoding=true;
-  const tw=document.getElementById(`tw-${d.cid}`);
-  const lbl=document.getElementById(`up-lbl-${d.cid}`);
-  const pb=document.getElementById(`pb-${d.cid}`);
+  // Thumbnail stays visible — only add the card-level transcoding class
+  document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
   document.getElementById(`card-${d.cid}`).classList.add('transcoding');
-  tw.classList.remove('uploading'); tw.classList.add('uploading'); // keep visible
-  lbl.textContent=`Transcoding ${(d.codec||'').toUpperCase()} · ${d.preset||''}`;
-  lbl.className='up-lbl phase-tc';
-  pb.className='pb pb-tc'; pb.style.width='0%';
-  document.getElementById(`pct-${d.cid}`).textContent='0%';
-  document.getElementById(`eta-${d.cid}`).textContent='';
+  // Reset thumbnail progress indicators
+  document.getElementById(`tcf-${d.cid}`).style.width='0%';
+  document.getElementById(`tcpct-${d.cid}`).textContent=`${(d.codec||'').toUpperCase()} 0%`;
   addActivity('transcode',`CH${d.cid+1} transcoding ${(d.codec||'').toUpperCase()} (${d.preset||''})`);
 });
 
 socket.on('transcode_progress',d=>{
-  document.getElementById(`pb-${d.cid}`).style.width=d.pct+'%';
-  document.getElementById(`pct-${d.cid}`).textContent=d.pct+'%';
+  document.getElementById(`tcf-${d.cid}`).style.width=d.pct+'%';
   const eta=d.eta_secs||0;
-  const etaEl=document.getElementById(`eta-${d.cid}`);
-  if(etaEl){
-    if(eta>0){
-      const m=Math.floor(eta/60),s=eta%60;
-      etaEl.textContent=m>0?`${m}m ${s}s remaining`:`${s}s remaining`;
-    } else { etaEl.textContent=''; }
-  }
+  let etaTxt='';
+  if(eta>0){ const m=Math.floor(eta/60),s=eta%60; etaTxt=' '+(m>0?`${m}m ${s}s`:`${s}s`); }
+  document.getElementById(`tcpct-${d.cid}`).textContent=`${d.pct}%${etaTxt}`;
 });
 
 socket.on('transcode_error',d=>{
   state[d.cid].transcoding=false;
-  document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
   document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
+  document.getElementById(`tcf-${d.cid}`).style.width='0%';
+  document.getElementById(`tcpct-${d.cid}`).textContent='';
   toast(`CH${d.cid+1} transcode error: ${d.error}`,true);
   addActivity('error',`CH${d.cid+1} transcode failed: ${d.error}`);
 });
@@ -934,13 +940,17 @@ socket.on('channel_ready',d=>{
   const s=state[d.cid];
   Object.assign(s,{filename:d.filename,ip:d.ip,port:d.port,
     encap:d.encap,bitrate:d.bitrate,loop:d.loop,
-    codec:d.codec||'copy',transcoding:false});
-  // Clear overlay
+    codec:d.codec||'copy',preset:d.preset||'fast',
+    vbitrate:d.vbitrate||'6M',abitrate:d.abitrate||'192k',
+    transcoding:false});
+  // Clear upload overlay and transcode progress
   document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
   document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
   document.getElementById(`pb-${d.cid}`).style.width='0%';
   document.getElementById(`pct-${d.cid}`).textContent='';
   document.getElementById(`eta-${d.cid}`).textContent='';
+  document.getElementById(`tcf-${d.cid}`).style.width='0%';
+  document.getElementById(`tcpct-${d.cid}`).textContent='';
   // Thumbnail — wait for actual load so a missing file doesn't hide the placeholder
   if(d.thumb){
     const img=document.getElementById(`img-${d.cid}`);
@@ -1082,13 +1092,17 @@ async function saveChSettings(){
   state[i].abitrate = document.getElementById('e-abr').value||'192k';
   state[i].encap    = document.getElementById('e-enc').value;
   state[i].loop     = document.getElementById('e-loop').checked;
-  // Push network settings to backend
+  // Push network + transcode settings to backend
   const body={
-    ip:     document.getElementById('e-ip').value.trim()||undefined,
-    port:   document.getElementById('e-port').value.trim()||undefined,
-    encap:  state[i].encap,
-    bitrate:document.getElementById('e-br').value,
-    loop:   state[i].loop
+    ip:      document.getElementById('e-ip').value.trim()||undefined,
+    port:    document.getElementById('e-port').value.trim()||undefined,
+    encap:   state[i].encap,
+    bitrate: document.getElementById('e-br').value,
+    loop:    state[i].loop,
+    codec:   state[i].codec,
+    preset:  state[i].preset,
+    vbitrate:state[i].vbitrate,
+    abitrate:state[i].abitrate,
   };
   const r=await fetch(`/api/channel/${i}/settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
@@ -1194,7 +1208,8 @@ function syncStatus(){
       document.getElementById(`pct-${i}`).textContent='';
       document.getElementById(`eta-${i}`).textContent='';
       Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
+        preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
       refreshCard(i);
       document.getElementById(`bs-${i}`).disabled=false;
       const img=document.getElementById(`img-${i}`);
@@ -1230,7 +1245,8 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
   for(const[cs,m] of Object.entries(d.channels||{})){
     const i=parseInt(cs);
     Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy'});
+      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
+      preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
     refreshCard(i);
     if(m.filename){
       document.getElementById(`bs-${i}`).disabled=false;
