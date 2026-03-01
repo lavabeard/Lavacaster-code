@@ -602,7 +602,7 @@ input[type=file]{display:none}
 
 <script>
 const socket = io();
-const MAX    = {{ max_channels }};
+const MAX    = Number("{{ max_channels }}") || 40;
 const state  = {};
 let selMonitorNic = null;
 let nicCache      = {};
