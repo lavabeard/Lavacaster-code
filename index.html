@@ -1188,7 +1188,7 @@ function syncStatus(){
       const tw=document.getElementById(`tw-${i}`);
       img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
       img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-      img.src=m.thumb+'?t='+Date.now();
+      img.src='/api/thumbnail/'+i+'?t='+Date.now();
       if(m.running) setRun(i); else setStop(i);
     }
     updateStats();
@@ -1225,7 +1225,7 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
       const tw=document.getElementById(`tw-${i}`);
       img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
       img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-      img.src=m.thumb+'?t='+Date.now();
+      img.src='/api/thumbnail/'+i+'?t='+Date.now();
     }
     if(m.running) setRun(i);
   }
