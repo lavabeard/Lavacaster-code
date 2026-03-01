@@ -28,7 +28,7 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;text-decoration:none}
 .logo-orb{flex-shrink:0}
 .ft-ball-wrap{display:inline-block}
-.ft-ball-img{height:52px;width:auto;display:block}
+.ft-ball-img{height:80px;width:auto;display:block}
 .logo-text-col{display:flex;flex-direction:column;gap:2px}
 .ws-chip{font-family:var(--mono);font-size:.62rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   padding:2px 8px;border-radius:3px;text-align:center;transition:all .4s;display:inline-block}
@@ -454,7 +454,7 @@ input[type=file]{display:none}
 
     <div class="hdr-right">
       <div class="hdr-badge">LIVE <b id="s-live">0</b>&nbsp;·&nbsp;LOADED <b id="s-loaded">0</b></div>
-      <button class="btn btn-lava" onclick="startAll()">▶ ALL</button>
+      <button class="btn btn-lava" onclick="startAll()">ALL</button>
       <button class="btn btn-stop" onclick="stopAll()">■ ALL</button>
       <button class="btn btn-ghost" onclick="openMod('m-settings')" title="Settings">⚙</button>
     </div>
@@ -468,7 +468,7 @@ input[type=file]{display:none}
 
   <!-- Global Transcode Settings Strip -->
   <div class="tc-strip" id="tc-strip">
-    <span class="tc-strip-lbl">⟳ Global Transcode</span>
+    <span class="tc-strip-lbl">Global Transcode</span>
     <div class="tc-sep"></div>
     <select class="tc-sel" id="gtc-codec" onchange="gtcCodecChange()">
       <option value="copy">Copy — No Transcode</option>
