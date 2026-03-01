@@ -19,6 +19,7 @@ import threading
 import time
 
 import logger
+from transcoder import probe_video_info, specs_match
 
 
 # ---------------------------------------------------------------------------
@@ -178,10 +179,24 @@ def process_upload(
             })
         else:
             dst_path = os.path.join(trans_dir, f"CH{cid + 1:02d}_{stem}.ts")
+
+            # Smart ingest: probe source and remux if it already matches target spec
+            src_info = probe_video_info(src_path)
+            remux    = specs_match(src_info, codec, resolution, fps, vbitrate, abitrate)
+            if remux:
+                logger.info(
+                    f"CH{cid + 1:02d} smart ingest: specs match — remuxing to TS (no re-encode)",
+                    {
+                        "vcodec": src_info.get("vcodec"),
+                        "res":    f"{src_info.get('width')}x{src_info.get('height')}",
+                        "fps":    round(src_info.get("fps", 0), 3),
+                    },
+                )
+
             socketio.emit("transcode_start", {
                 "cid":    cid,
-                "codec":  codec,
-                "preset": preset,
+                "codec":  "remux" if remux else codec,
+                "preset": "copy"  if remux else preset,
             })
 
             def on_progress(cid, pct, eta_secs=0):
@@ -219,7 +234,8 @@ def process_upload(
 
             manager.start_transcode(
                 cid, src_path, dst_path,
-                codec, preset, vbitrate, abitrate, resolution, fps,
+                "copy" if remux else codec,
+                preset, vbitrate, abitrate, resolution, fps,
                 on_progress, on_complete, on_error,
             )
 
