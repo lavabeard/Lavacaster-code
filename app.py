@@ -147,6 +147,7 @@ def status():
 
     return jsonify({
         "channels":        manager.get_status(),
+        "channel_prefs":   {str(k): v for k, v in manager.channel_prefs.items()},
         "global_bitrate":  manager.global_bitrate or "",
         "media_path":      manager.media_path,
         "bitrate_presets": BITRATE_PRESETS,
@@ -304,8 +305,10 @@ def retranscode(cid):
     dst_path = os.path.join(TRANS_DIR, f"CH{cid + 1:02d}_{stem}.ts")
     socketio.emit("transcode_start", {"cid": cid, "codec": codec, "preset": preset})
 
-    def on_progress(cid, pct, eta_secs=0):
-        socketio.emit("transcode_progress", {"cid": cid, "pct": pct, "eta_secs": eta_secs})
+    def on_progress(cid, pct, eta_secs=0, fps="", speed=""):
+        socketio.emit("transcode_progress", {
+            "cid": cid, "pct": pct, "eta_secs": eta_secs, "fps": fps, "speed": speed,
+        })
 
     def on_complete(cid, filepath):
         manager.add_channel(

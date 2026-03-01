@@ -360,21 +360,33 @@ class TranscodeJob:
                 bufsize=1,
             )
 
+            # FFmpeg -progress writes key=value lines in blocks ended by "progress=..."
+            block: dict = {}
             for line in self.process.stdout:
                 if not self.active:
                     break
                 line = line.strip()
-                if line.startswith("out_time_us="):
+                if "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                block[key] = val.strip()
+
+                if key == "progress":           # full block received — emit
                     try:
-                        us = int(line.split("=", 1)[1])
-                        if duration > 0 and us > 0:
-                            pct     = min(99, int(us / (duration * 1_000_000) * 100))
-                            elapsed = time.time() - start_ts
-                            eta     = int((elapsed / pct) * (100 - pct)) if pct > 0 else 0
-                            if on_progress:
-                                on_progress(self.cid, pct, eta)
-                    except (ValueError, ZeroDivisionError):
-                        pass
+                        us = int(block.get("out_time_us", 0))
+                    except (ValueError, TypeError):
+                        us = 0
+                    if duration > 0 and us > 0:
+                        pct     = min(99, int(us / (duration * 1_000_000) * 100))
+                        elapsed = time.time() - start_ts
+                        eta     = int((elapsed / pct) * (100 - pct)) if pct > 0 else 0
+                    else:
+                        pct = eta = 0
+                    fps   = block.get("fps",   "")
+                    speed = block.get("speed", "")
+                    if on_progress:
+                        on_progress(self.cid, pct, eta, fps=fps, speed=speed)
+                    block = {}
 
             self.process.wait()
             rc = self.process.returncode
