@@ -329,101 +329,6 @@ input[type=file]{display:none}
         <div class="ft-ball-wrap">
           <img src="/static/fortune-teller.png" class="ft-ball-img" alt="Fortune teller ball">
         </div>
-        <!-- SVG REMOVED — kept below as dead comment for reference only
-        <svg id="ft-ball" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="fti" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#050e07"/><stop offset="70%" stop-color="#020704"/><stop offset="100%" stop-color="#010402"/></radialGradient>
-            <radialGradient id="ftg" cx="32%" cy="26%" r="52%"><stop offset="0%" stop-color="rgba(255,255,255,.12)"/><stop offset="55%" stop-color="rgba(200,255,220,.03)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
-            <radialGradient id="ftp" cx="36%" cy="30%" r="65%"><stop offset="0%" stop-color="#c0ffd8"/><stop offset="30%" stop-color="#44dd88"/><stop offset="65%" stop-color="#1e8848"/><stop offset="100%" stop-color="#072a15"/></radialGradient>
-            <radialGradient id="ftn" cx="50%" cy="55%" r="50%"><stop offset="0%" stop-color="rgba(50,200,110,.28)"/><stop offset="60%" stop-color="rgba(20,100,55,.09)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
-            <filter id="ftblur"><feGaussianBlur stdDeviation="2.5"/></filter>
-            <clipPath id="ftclip"><circle cx="100" cy="50" r="34"/></clipPath>
-          </defs>
-
-          <!-- Background stars -->
-          <circle cx="18"  cy="12" r=".7" fill="rgba(180,255,200,.5)"/>
-          <circle cx="30"  cy="5"  r=".5" fill="rgba(180,255,200,.35)"/>
-          <circle cx="8"   cy="55" r=".6" fill="rgba(180,255,200,.4)"/>
-          <circle cx="183" cy="10" r=".7" fill="rgba(180,255,200,.5)"/>
-          <circle cx="196" cy="32" r=".5" fill="rgba(180,255,200,.35)"/>
-          <circle cx="172" cy="88" r=".6" fill="rgba(180,255,200,.4)"/>
-
-          <!-- ── Left skeletal hand (behind ball) ── -->
-          <g opacity=".9">
-            <path d="M48 67 Q46 80 48 93 Q53 101 62 99 Q70 97 72 86 L72 66" fill="#0c1410" stroke="rgba(100,180,120,.22)" stroke-width=".7"/>
-            <rect x="48"   y="35" width="6" height="32" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <rect x="55.5" y="27" width="6" height="39" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <rect x="63"   y="21" width="6" height="45" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <rect x="70.5" y="25" width="6" height="41" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <path d="M70 73 Q78 67 77 77 Q76 84 70 82" fill="#0c1410" stroke="rgba(100,180,120,.18)" stroke-width=".6"/>
-            <ellipse cx="51"   cy="65" rx="3.2" ry="1.8" fill="#121c14"/>
-            <ellipse cx="58.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
-            <ellipse cx="66"   cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
-            <ellipse cx="73.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
-            <rect x="55.5" y="57" width="6" height="3.5" rx="1.5" fill="rgba(200,180,40,.4)" stroke="rgba(230,210,80,.5)" stroke-width=".5"/>
-          </g>
-
-          <!-- ── Right skeletal hand (mirror of left) ── -->
-          <g opacity=".9" transform="translate(200,0) scale(-1,1)">
-            <path d="M48 67 Q46 80 48 93 Q53 101 62 99 Q70 97 72 86 L72 66" fill="#0c1410" stroke="rgba(100,180,120,.22)" stroke-width=".7"/>
-            <rect x="48"   y="35" width="6" height="32" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <rect x="55.5" y="27" width="6" height="39" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <rect x="63"   y="21" width="6" height="45" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <rect x="70.5" y="25" width="6" height="41" rx="3" fill="#0c1410" stroke="rgba(100,180,120,.2)" stroke-width=".6"/>
-            <path d="M70 73 Q78 67 77 77 Q76 84 70 82" fill="#0c1410" stroke="rgba(100,180,120,.18)" stroke-width=".6"/>
-            <ellipse cx="51"   cy="65" rx="3.2" ry="1.8" fill="#121c14"/>
-            <ellipse cx="58.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
-            <ellipse cx="66"   cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
-            <ellipse cx="73.5" cy="64" rx="3.2" ry="1.8" fill="#121c14"/>
-            <rect x="55.5" y="57" width="6" height="3.5" rx="1.5" fill="rgba(200,180,40,.4)" stroke="rgba(230,210,80,.5)" stroke-width=".5"/>
-          </g>
-
-          <!-- Ball dark interior (drawn before planet so planet renders on top) -->
-          <circle cx="100" cy="50" r="36" fill="url(#fti)"/>
-
-          <!-- ══ PLANET GROUP: outer ring + all interior green elements.
-               CSS applies hue-rotate(240deg) here on disconnect to shift green→red. ══ -->
-          <g id="ft-planet-grp">
-            <!-- Outer atmospheric breathing ring (NOT clipped) -->
-            <circle cx="100" cy="50" r="41" fill="none" stroke="rgba(40,200,100,.1)" stroke-width="3">
-              <animate attributeName="stroke-opacity" values=".1;.03;.1" dur="3.5s" repeatCount="indefinite"/>
-              <animate attributeName="r"              values="40;43;40"  dur="3.5s" repeatCount="indefinite"/>
-            </circle>
-            <!-- Interior: nebula + planet + rings (clipped to ball sphere) -->
-            <g clip-path="url(#ftclip)">
-              <ellipse cx="100" cy="54" rx="26" ry="18" fill="url(#ftn)" filter="url(#ftblur)"/>
-              <ellipse cx="90"  cy="46" rx="16" ry="10" fill="rgba(30,160,80,.1)"  filter="url(#ftblur)" transform="rotate(-18 90 46)"/>
-              <ellipse cx="112" cy="60" rx="14" ry="9"  fill="rgba(30,140,70,.08)" filter="url(#ftblur)" transform="rotate(20 112 60)"/>
-              <!-- Planet body -->
-              <ellipse cx="100" cy="48" rx="14" ry="12" fill="url(#ftp)"/>
-              <!-- Surface bands -->
-              <ellipse cx="100" cy="46" rx="14" ry="3.5" fill="none" stroke="rgba(120,255,170,.2)" stroke-width="1.2"/>
-              <ellipse cx="100" cy="52" rx="13" ry="3"   fill="none" stroke="rgba(80,210,130,.15)" stroke-width=".8"/>
-              <!-- Saturn ring system -->
-              <ellipse cx="100" cy="48" rx="24" ry="6"   fill="none" stroke="rgba(100,255,160,.4)" stroke-width="2.2"/>
-              <ellipse cx="100" cy="48" rx="20" ry="4.8" fill="none" stroke="rgba(60,210,120,.25)" stroke-width="1.2"/>
-              <!-- Ring shadow for depth -->
-              <path d="M79 50.5 Q100 56 121 50.5" fill="none" stroke="rgba(0,60,30,.45)" stroke-width="1"/>
-              <!-- Planet specular highlight -->
-              <ellipse cx="94" cy="43" rx="4" ry="3.5" fill="rgba(200,255,230,.18)"/>
-              <!-- Orbiting moon -->
-              <circle cx="118" cy="42" r="2" fill="rgba(140,255,180,.65)">
-                <animate attributeName="cx" values="118;116;118" dur="6s" repeatCount="indefinite"/>
-                <animate attributeName="cy" values="42;44;42"    dur="6s" repeatCount="indefinite"/>
-              </circle>
-              <!-- Sparkles -->
-              <circle cx="88"  cy="38" r=".8" fill="rgba(150,255,190,.45)"/>
-              <circle cx="113" cy="63" r=".7" fill="rgba(150,255,190,.38)"/>
-            </g>
-          </g>
-
-          <!-- Ball glass overlay (neutral — stays white/clear on disconnect) -->
-          <circle cx="100" cy="50" r="36" fill="url(#ftg)"/>
-          <circle cx="100" cy="50" r="36" fill="none" stroke="rgba(200,255,220,.15)" stroke-width=".8"/>
-          <!-- Specular highlights (neutral) -->
-          <ellipse cx="87" cy="36" rx="7" ry="4.5" fill="rgba(255,255,255,.07)" transform="rotate(-22 87 36)"/>
-          <circle  cx="80" cy="32" r="2" fill="rgba(255,255,255,.05)"/>
-        </svg> -->
       </div>
       <div class="logo-text-col">
         <div class="logo-name">LavaCast</div>
@@ -1019,7 +924,7 @@ async function toggleStream(i){
   updateStats();
 }
 async function startAll(){ await fetch('/api/start_all',{method:'POST'}); for(let i=0;i<MAX;i++) if(state[i].filename&&!state[i].transcoding){state[i].running=true;setRun(i);} updateStats(); addActivity('stream','Start All triggered'); }
-async function stopAll(){ await fetch('/api/stop_all',{method:'POST'}); addActivity('stream','Stop All triggered'); }
+async function stopAll(){ await fetch('/api/stop_all',{method:'POST'}); for(let i=0;i<MAX;i++){state[i].running=false;setStop(i);} updateStats(); addActivity('stream','Stop All triggered'); }
 
 async function removeCh(i){
   if(state[i].running) await fetch(`/api/stop/${i}`,{method:'POST'});
