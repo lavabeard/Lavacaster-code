@@ -9,6 +9,7 @@ The StreamManager also owns TranscodeJob references so the two concerns
 lives entirely in transcoding/transcoder.py.
 """
 
+import json
 import os
 import socket
 import struct
@@ -18,6 +19,8 @@ import threading
 
 import logger
 from transcoder import TranscodeJob
+
+_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "channel_state.json")
 
 # ---------------------------------------------------------------------------
 # Bitrate preset list (used by UI and upload layer)
@@ -216,6 +219,60 @@ class StreamManager:
         self.selected_nic   = None
         self.media_path     = os.path.expanduser("~/lavacast40/media")
         logger.system("StreamManager v8 initialized")
+        self._load_state()
+
+    # ------------------------------------------------------------------
+    # State persistence
+    # ------------------------------------------------------------------
+
+    def _save_state(self):
+        state = {
+            "global_bitrate": self.global_bitrate,
+            "selected_nic":   self.selected_nic,
+            "media_path":     self.media_path,
+            "channels":       {str(cid): m for cid, m in self.metadata.items()},
+        }
+        try:
+            with open(_STATE_FILE, "w") as f:
+                json.dump(state, f, indent=2)
+        except Exception as e:
+            logger.error(f"State save failed: {e}")
+
+    def _load_state(self):
+        if not os.path.exists(_STATE_FILE):
+            return
+        try:
+            with open(_STATE_FILE) as f:
+                state = json.load(f)
+        except Exception as e:
+            logger.error(f"State load failed: {e}")
+            return
+
+        self.global_bitrate = state.get("global_bitrate")
+        self.selected_nic   = state.get("selected_nic")
+        if state.get("media_path"):
+            self.media_path = state["media_path"]
+
+        for cid_str, m in state.get("channels", {}).items():
+            cid      = int(cid_str)
+            filepath = m.get("filepath", "")
+            if not filepath or not os.path.exists(filepath):
+                logger.warn(
+                    f"CH{cid + 1:02d} restore skipped — file missing: {filepath}"
+                )
+                continue
+            self.channels[cid] = StreamChannel(
+                cid, filepath,
+                ip             = m.get("ip",             self._auto_ip(cid)),
+                port           = m.get("port",            self._auto_port(cid)),
+                encap          = m.get("encap",           "udp"),
+                bitrate        = self.global_bitrate,
+                loop           = m.get("loop",            True),
+                nic            = self.selected_nic,
+                pre_transcoded = m.get("pre_transcoded",  False),
+            )
+            self.metadata[cid] = {**m, "running": False}
+            logger.info(f"CH{cid + 1:02d} restored: {m.get('filename', '?')}")
 
     # ------------------------------------------------------------------
     # Address helpers
@@ -274,6 +331,7 @@ class StreamManager:
             f"CH{cid + 1:02d} loaded: {filename}",
             {"ip": ip, "port": port, "pre_tc": pre_transcoded},
         )
+        self._save_state()
         return ip, port
 
     def remove_channel(self, cid: int):
@@ -283,6 +341,7 @@ class StreamManager:
         self.channels.pop(cid, None)
         self.metadata.pop(cid, None)
         logger.info(f"CH{cid + 1:02d} removed: {fname}")
+        self._save_state()
 
     def update_channel(self, cid: int, **kw) -> bool:
         """Update network settings on an existing channel.  Returns was_running."""
@@ -294,6 +353,7 @@ class StreamManager:
         for k, v in kw.items():
             if k in m:
                 m[k] = int(v) if k == "port" else (v or "")
+        self._save_state()
         return was
 
     # ------------------------------------------------------------------
@@ -339,6 +399,7 @@ class StreamManager:
         for ch in self.channels.values():
             ch.nic = self.selected_nic
         logger.info(f"Streaming NIC set to: {nic or 'default'}")
+        self._save_state()
 
     def apply_global_bitrate(self, bitrate: str):
         self.global_bitrate = bitrate or None
@@ -347,6 +408,7 @@ class StreamManager:
                 ch.bitrate = self.global_bitrate
             self.metadata[cid]["bitrate"] = self.global_bitrate or ""
         logger.info("Global bitrate", {"bitrate": self.global_bitrate or "passthrough"})
+        self._save_state()
 
     # ------------------------------------------------------------------
     # Transcode coordination
