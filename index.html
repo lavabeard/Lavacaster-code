@@ -865,9 +865,13 @@ function uploadFile(i,inp){
       if(globalTC.codec==='copy'){
         tw.classList.remove('uploading');
         pb.style.width='0%';
+      } else {
+        // Bridge the gap while thumbnail generates before transcode_start fires
+        lbl.textContent='Processing\u2026'; lbl.className='up-lbl phase-upload';
+        pb.style.width='100%';
+        document.getElementById(`pct-${i}`).textContent='';
       }
-      // else: transcode_start socket event will switch the overlay
-      toast(`CH${i+1}: file received`+(globalTC.codec!=='copy'?` — transcoding ${globalTC.codec.toUpperCase()}…`:'…'));
+      toast(`CH${i+1}: file received`+(globalTC.codec!=='copy'?` \u2014 transcoding ${globalTC.codec.toUpperCase()}\u2026`:''));
       addActivity('info',`CH${i+1} uploaded: ${file.name}`);
     } else {
       tw.classList.remove('uploading'); pb.style.width='0%';

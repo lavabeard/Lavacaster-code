@@ -131,14 +131,17 @@ def process_upload(
     resolution = global_tc.get("resolution", "1080p")
     fps        = global_tc.get("fps",        "original")
 
-    src_path = os.path.join(orig_dir, f"ch{cid}_{filename}")
-    file_storage.save(src_path)
+    src_path = os.path.join(orig_dir, f"CH{cid + 1:02d}_{filename}")
 
-    size_mb = round(os.path.getsize(src_path) / 1_048_576, 1)
-    logger.info(
-        f"CH{cid + 1:02d} uploaded: {filename}",
-        {"size_mb": size_mb, "codec": codec},
-    )
+    if os.path.exists(src_path):
+        logger.info(f"CH{cid + 1:02d} reusing existing file: {filename}")
+    else:
+        file_storage.save(src_path)
+        size_mb = round(os.path.getsize(src_path) / 1_048_576, 1)
+        logger.info(
+            f"CH{cid + 1:02d} uploaded: {filename}",
+            {"size_mb": size_mb, "codec": codec},
+        )
 
     def _pipeline():
         generate_thumbnail(src_path, cid, thumb_dir)
@@ -147,18 +150,22 @@ def process_upload(
         if codec == "copy":
             ip, port = manager.add_channel(
                 cid, src_path, filename,
-                pre_transcoded=False, src_path=src_path,
+                pre_transcoded=False, src_path=src_path, codec="copy",
             )
+            m = manager.metadata[cid]
             socketio.emit("channel_ready", {
                 "cid":      cid,
                 "filename": filename,
                 "ip":       ip,
                 "port":     port,
-                "encap":    "udp",
+                "encap":    m.get("encap", "udp"),
                 "bitrate":  manager.global_bitrate or "",
-                "loop":     True,
+                "loop":     m.get("loop", True),
                 "codec":    "copy",
-                "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={ts}",
+                "preset":   m.get("preset",   "fast"),
+                "vbitrate": m.get("vbitrate",  "6M"),
+                "abitrate": m.get("abitrate",  "192k"),
+                "thumb":    f"/api/thumbnail/{cid}?t={ts}",
             })
         else:
             dst_path = os.path.join(trans_dir, f"ch{cid}.ts")
@@ -190,7 +197,10 @@ def process_upload(
                     "bitrate":  m.get("bitrate", ""),
                     "loop":     True,
                     "codec":    codec,
-                    "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
+                    "preset":   m.get("preset",   "fast"),
+                    "vbitrate": m.get("vbitrate",  "6M"),
+                    "abitrate": m.get("abitrate",  "192k"),
+                    "thumb":    f"/api/thumbnail/{cid}?t={time.time()}",
                 })
 
             def on_error(cid, msg):
