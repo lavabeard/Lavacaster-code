@@ -239,21 +239,17 @@ def retranscode(cid):
     if codec == "copy":
         manager.add_channel(
             cid, src_path, meta["filename"],
-            pre_transcoded=False, src_path=src_path, codec="copy",
+            pre_transcoded=False, src_path=src_path,
         )
-        m = manager.metadata[cid]
         socketio.emit("channel_ready", {
             "cid":      cid,
             "filename": meta["filename"],
-            "ip":       m["ip"],
-            "port":     m["port"],
-            "encap":    m.get("encap", "udp"),
-            "bitrate":  m.get("bitrate", ""),
-            "loop":     m.get("loop", True),
+            "ip":       meta["ip"],
+            "port":     meta["port"],
+            "encap":    meta.get("encap", "udp"),
+            "bitrate":  meta.get("bitrate", ""),
+            "loop":     meta.get("loop", True),
             "codec":    "copy",
-            "preset":   m.get("preset",   "fast"),
-            "vbitrate": m.get("vbitrate",  "6M"),
-            "abitrate": m.get("abitrate",  "192k"),
             "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
         })
         if was_running:
@@ -270,7 +266,7 @@ def retranscode(cid):
     def on_complete(cid, filepath):
         manager.add_channel(
             cid, filepath, meta["filename"],
-            pre_transcoded=True, src_path=src_path, codec=codec,
+            pre_transcoded=True, src_path=src_path,
         )
         m = manager.metadata[cid]
         socketio.emit("channel_ready", {
@@ -282,9 +278,6 @@ def retranscode(cid):
             "bitrate":  m.get("bitrate", ""),
             "loop":     m.get("loop", True),
             "codec":    codec,
-            "preset":   m.get("preset",   "fast"),
-            "vbitrate": m.get("vbitrate",  "6M"),
-            "abitrate": m.get("abitrate",  "192k"),
             "thumb":    f"/static/thumbnails/ch{cid}.jpg?t={time.time()}",
         })
         if was_running:

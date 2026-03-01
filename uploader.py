@@ -185,7 +185,7 @@ def process_upload(
             def on_complete(cid, filepath):
                 ip, port = manager.add_channel(
                     cid, filepath, filename,
-                    pre_transcoded=True, src_path=src_path, codec=codec,
+                    pre_transcoded=True, src_path=src_path,
                 )
                 m = manager.metadata[cid]
                 socketio.emit("channel_ready", {
@@ -195,7 +195,7 @@ def process_upload(
                     "port":     port,
                     "encap":    m.get("encap", "udp"),
                     "bitrate":  m.get("bitrate", ""),
-                    "loop":     m.get("loop", True),
+                    "loop":     True,
                     "codec":    codec,
                     "preset":   m.get("preset",   "fast"),
                     "vbitrate": m.get("vbitrate",  "6M"),
