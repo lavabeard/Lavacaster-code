@@ -152,6 +152,8 @@ def status():
         "bitrate_presets": BITRATE_PRESETS,
         "nics":            nics,
         "selected_nic":    manager.selected_nic or "",
+        "monitor_nic":     manager.monitor_nic  or "",
+        "auto_start":      manager.auto_start,
         "global_tc":       GLOBAL_TC,
     })
 
@@ -182,10 +184,19 @@ def global_settings():
             manager.media_path = p
     if "nic" in d:
         manager.set_nic(d["nic"])
+    if "monitor_nic" in d:
+        manager.monitor_nic = d["monitor_nic"] or ""
+        manager._save_state()
+    if "auto_start" in d:
+        manager.auto_start = bool(d["auto_start"])
+        manager._save_state()
+        logger.info(f"Auto-start {'enabled' if manager.auto_start else 'disabled'}")
     return jsonify({
         "global_bitrate": manager.global_bitrate or "",
         "media_path":     manager.media_path,
         "selected_nic":   manager.selected_nic or "",
+        "monitor_nic":    manager.monitor_nic  or "",
+        "auto_start":     manager.auto_start,
     })
 
 
@@ -452,4 +463,12 @@ if __name__ == "__main__":
     port = cfg.SERVER["port"]
     logger.system("LavaCast 40 v8 starting", {"host": local_ip, "port": port})
     print(f"\n  LavaCast 40 v8  |  http://{local_ip}:{port}\n")
+
+    if manager.auto_start and manager.channels:
+        def _auto_start():
+            time.sleep(2.5)  # give the server a moment to finish binding
+            manager.start_all(on_stop=_on_stop)
+            logger.system(f"Auto-start: launched {len(manager.channels)} channel(s)")
+        threading.Thread(target=_auto_start, daemon=True).start()
+
     socketio.run(app, host="0.0.0.0", port=port, debug=False)
