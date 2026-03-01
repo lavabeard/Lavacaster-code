@@ -833,7 +833,7 @@ function triggerUp(i){
   document.getElementById(`fi-${i}`).click();
 }
 
-function uploadFile(i,inp){
+function uploadFile(i,inp,overwrite=false){
   const file=inp.files[0]; if(!file) return;
   const tw=document.getElementById(`tw-${i}`);
   const lbl=document.getElementById(`up-lbl-${i}`);
@@ -852,6 +852,7 @@ function uploadFile(i,inp){
   fd.append('abitrate',   globalTC.abitrate);
   fd.append('resolution', globalTC.resolution);
   fd.append('fps',        globalTC.fps);
+  fd.append('overwrite',  overwrite ? 'true' : 'false');
 
   const xhr=new XMLHttpRequest(); xhr.open('POST',`/api/upload/${i}`);
   xhr.upload.onprogress=e=>{
@@ -873,11 +874,20 @@ function uploadFile(i,inp){
       }
       toast(`CH${i+1}: file received`+(globalTC.codec!=='copy'?` \u2014 transcoding ${globalTC.codec.toUpperCase()}\u2026`:''));
       addActivity('info',`CH${i+1} uploaded: ${file.name}`);
+      inp.value='';
+    } else if(xhr.status===409){
+      tw.classList.remove('uploading'); pb.style.width='0%';
+      const res=JSON.parse(xhr.responseText||'{}');
+      if(res.exists && confirm(`"${res.filename}" already exists in the originals folder.\n\nOverwrite and continue?`)){
+        uploadFile(i,inp,true);
+      } else {
+        inp.value='';
+      }
     } else {
       tw.classList.remove('uploading'); pb.style.width='0%';
       toast('Upload error: '+(JSON.parse(xhr.responseText||'{}').error||'?'),true);
+      inp.value='';
     }
-    inp.value='';
   };
   xhr.onerror=()=>{ tw.classList.remove('uploading'); toast('Upload failed.',true); inp.value=''; };
   xhr.send(fd);
