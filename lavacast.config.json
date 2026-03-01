@@ -1,0 +1,32 @@
+{
+  "_readme": "LavaCast 40 v8 — edit this file and restart the server to apply changes.",
+
+  "server": {
+    "_readme": "Web server settings.",
+    "port":          5000,
+    "max_upload_gb": 20,
+    "secret_key":    "lavacast40-v8"
+  },
+
+  "streaming": {
+    "_readme": "Streaming network defaults. Changing max_channels also requires updating 'const MAX' in index.html.",
+    "max_channels":    40,
+    "base_port":       5100,
+    "multicast_base":  "239.1.1",
+    "default_encap":   "udp",
+    "default_loop":    true,
+    "default_bitrate": "",
+    "selected_nic":    "",
+    "media_path":      "~/lavacast40/media"
+  },
+
+  "transcode": {
+    "_readme": "Default transcode profile applied to every new upload (unless overridden per-channel).",
+    "codec":      "h264",
+    "preset":     "fast",
+    "vbitrate":   "6M",
+    "abitrate":   "192k",
+    "resolution": "1080p",
+    "fps":        "original"
+  }
+}

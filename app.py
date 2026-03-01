@@ -22,6 +22,7 @@ import time
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO
 
+import config as cfg
 from streamer import StreamManager, BITRATE_PRESETS
 from transcoder import VALID_CODECS, VALID_PRESETS, VALID_RESOLUTIONS, VALID_FPS
 from uploader import process_upload, validate_extension
@@ -45,21 +46,23 @@ app = Flask(
     template_folder=BASE_DIR,
     static_folder=os.path.join(BASE_DIR, "frontend", "static"),
 )
-app.config["SECRET_KEY"]         = "lavacast40-v8"
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024 * 1024  # 20 GB
+app.config["SECRET_KEY"]         = cfg.SERVER["secret_key"]
+app.config["MAX_CONTENT_LENGTH"] = cfg.SERVER["max_upload_gb"] * 1024 ** 3
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
-manager  = StreamManager()
+manager  = StreamManager(
+    max_channels    = cfg.STREAMING["max_channels"],
+    base_port       = cfg.STREAMING["base_port"],
+    multicast_base  = cfg.STREAMING["multicast_base"],
+    default_encap   = cfg.STREAMING["default_encap"],
+    default_loop    = cfg.STREAMING["default_loop"],
+    default_bitrate = cfg.STREAMING["default_bitrate"],
+    selected_nic    = cfg.STREAMING["selected_nic"],
+    media_path      = cfg.STREAMING["media_path"],
+)
 
-# Global transcode profile — editable via /api/global_transcode
-GLOBAL_TC = {
-    "codec":      "h264",
-    "preset":     "fast",
-    "vbitrate":   "6M",
-    "abitrate":   "192k",
-    "resolution": "1080p",
-    "fps":        "original",
-}
+# Global transcode profile — seeded from config, editable at runtime via /api/global_transcode
+GLOBAL_TC: dict = dict(cfg.TRANSCODE)
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +79,14 @@ try:
                           "mem_used_gb": _m_used, "mem_total_gb": _m_total, "nics": {}})
 except Exception:
     pass
+
+if cfg._status["loaded"]:
+    logger.system("Config loaded", {"file": cfg.CONFIG_FILE})
+elif cfg._status["error"]:
+    logger.warn(f"Config parse error — using defaults: {cfg._status['error']}")
+else:
+    logger.system("Config file absent — using built-in defaults", {"expected": cfg.CONFIG_FILE})
+
 
 def _metrics_loop():
     logger.system("Metrics thread started (real OS thread, reads /proc)")
@@ -100,7 +111,7 @@ def _on_stop(cid):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", max_channels=manager.max_channels)
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +185,7 @@ def global_settings():
 
 @app.route("/api/upload/<int:cid>", methods=["POST"])
 def upload(cid):
-    if not 0 <= cid < 40:
+    if not 0 <= cid < manager.max_channels:
         return jsonify({"error": "Invalid channel"}), 400
     if "file" not in request.files:
         return jsonify({"error": "No file"}), 400
@@ -428,6 +439,7 @@ if __name__ == "__main__":
         local_ip = _s.gethostbyname(_s.gethostname())
     except Exception:
         local_ip = "0.0.0.0"
-    logger.system("LavaCast 40 v8 starting", {"host": local_ip, "port": 5000})
-    print(f"\n  LavaCast 40 v8  |  http://{local_ip}:5000\n")
-    socketio.run(app, host="0.0.0.0", port=5000, debug=False)
+    port = cfg.SERVER["port"]
+    logger.system("LavaCast 40 v8 starting", {"host": local_ip, "port": port})
+    print(f"\n  LavaCast 40 v8  |  http://{local_ip}:{port}\n")
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
