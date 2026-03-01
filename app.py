@@ -471,4 +471,18 @@ if __name__ == "__main__":
             logger.system(f"Auto-start: launched {len(manager.channels)} channel(s)")
         threading.Thread(target=_auto_start, daemon=True).start()
 
+    # Regenerate any missing thumbnails for channels restored from state file
+    if manager.metadata:
+        from uploader import generate_thumbnail
+        def _regen_thumbs():
+            time.sleep(1.5)  # let the server finish binding first
+            for cid, m in list(manager.metadata.items()):
+                thumb = os.path.join(THUMB_DIR, f"ch{cid}.jpg")
+                if not os.path.exists(thumb):
+                    src = m.get("src_path") or m.get("filepath", "")
+                    if src and os.path.exists(src):
+                        logger.info(f"CH{cid + 1:02d} regenerating missing thumbnail")
+                        generate_thumbnail(src, cid, THUMB_DIR)
+        threading.Thread(target=_regen_thumbs, daemon=True).start()
+
     socketio.run(app, host="0.0.0.0", port=port, debug=False)

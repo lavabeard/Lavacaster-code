@@ -20,7 +20,10 @@ import threading
 import logger
 from transcoder import TranscodeJob
 
-_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "channel_state.json")
+_BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
+_THUMB_DIR     = os.path.join(_BASE_DIR, "frontend", "static", "thumbnails")
+_CHANNELS_FILE = os.path.join(_BASE_DIR, "lavacast_channels.json")   # primary — human-editable
+_STATE_FILE    = os.path.join(_BASE_DIR, "channel_state.json")        # legacy fallback
 
 # ---------------------------------------------------------------------------
 # Bitrate preset list (used by UI and upload layer)
@@ -243,26 +246,35 @@ class StreamManager:
 
     def _save_state(self):
         """
-        Write the full runtime state to channel_state.json in a human-readable,
-        manually-editable format.  Keys prefixed with '_' are ignored on load.
+        Write full runtime state to lavacast_channels.json — a human-readable,
+        manually-editable config file.  Keys prefixed with '_' are comments and
+        are ignored on load.  Falls back to legacy channel_state.json name on
+        write failure.
         """
-        # Strip transient fields that should never be hand-edited
-        _SKIP = {"running", "thumb"}
-        def _clean(m: dict) -> dict:
-            return {k: v for k, v in m.items() if k not in _SKIP}
+        _SKIP = {"running", "thumb"}   # transient; never hand-edit these
+
+        def _channel_entry(cid: int, m: dict) -> dict:
+            entry = {k: v for k, v in m.items() if k not in _SKIP}
+            entry["_label"]    = f"CH{cid + 1:02d}"
+            entry["thumbnail"] = os.path.join(_THUMB_DIR, f"ch{cid}.jpg")
+            return entry
 
         state = {
             "_readme": (
-                "LavaCast 40 v8 — runtime state file.  "
-                "Edit manually then restart to apply.  "
-                "Keys starting with '_' are ignored on load."
+                "LavaCast 40 v8 — channel assignments and runtime settings. "
+                "Edit manually then restart to apply. "
+                "Keys starting with '_' are comments; they are ignored on load."
+            ),
+            "_hint": (
+                "Channel IDs are 0-based internally. "
+                "_label shows the display name (id 0 = CH01, id 39 = CH40)."
             ),
             "global_transcode": {
                 "_readme": "Default transcode profile applied to uploads and re-transcodes",
                 **self.global_tc,
             },
             "global_streaming": {
-                "_readme": "Streaming output settings (NIC, bitrate cap, media path)",
+                "_readme": "Streaming output settings — NIC, bitrate cap, media path, auto-start",
                 "global_bitrate": self.global_bitrate or "",
                 "selected_nic":   self.selected_nic   or "",
                 "monitor_nic":    self.monitor_nic    or "",
@@ -270,23 +282,28 @@ class StreamManager:
                 "auto_start":     self.auto_start,
             },
             "channels": {
-                str(cid): _clean(m) for cid, m in self.metadata.items()
+                str(cid): _channel_entry(cid, m)
+                for cid, m in self.metadata.items()
             },
         }
         try:
-            with open(_STATE_FILE, "w") as f:
+            with open(_CHANNELS_FILE, "w") as f:
                 json.dump(state, f, indent=2)
         except Exception as e:
-            logger.error(f"State save failed: {e}")
+            logger.error(f"Channels config save failed: {e}")
 
     def _load_state(self):
-        if not os.path.exists(_STATE_FILE):
-            return
-        try:
-            with open(_STATE_FILE) as f:
-                state = json.load(f)
-        except Exception as e:
-            logger.error(f"State load failed: {e}")
+        # Try primary channels file first, then legacy fallback
+        state = None
+        for path in (_CHANNELS_FILE, _STATE_FILE):
+            if os.path.exists(path):
+                try:
+                    with open(path) as f:
+                        state = json.load(f)
+                    break
+                except Exception as e:
+                    logger.error(f"State load failed ({path}): {e}")
+        if state is None:
             return
 
         # Support both the new sectioned format and the old flat format
@@ -308,8 +325,10 @@ class StreamManager:
         self.global_tc = {k: v for k, v in gt.items() if not k.startswith("_")}
 
         for cid_str, m in state.get("channels", {}).items():
-            cid      = int(cid_str)
-            filepath = m.get("filepath", "")
+            cid     = int(cid_str)
+            # Strip comment keys (_label, _readme, thumbnail path, etc.) before storing
+            m_clean = {k: v for k, v in m.items() if not k.startswith("_") and k != "thumbnail"}
+            filepath = m_clean.get("filepath", "")
             if not filepath or not os.path.exists(filepath):
                 logger.warn(
                     f"CH{cid + 1:02d} restore skipped — file missing: {filepath}"
@@ -317,16 +336,16 @@ class StreamManager:
                 continue
             self.channels[cid] = StreamChannel(
                 cid, filepath,
-                ip             = m.get("ip",             self._auto_ip(cid)),
-                port           = m.get("port",            self._auto_port(cid)),
-                encap          = m.get("encap",           self.default_encap),
+                ip             = m_clean.get("ip",             self._auto_ip(cid)),
+                port           = m_clean.get("port",            self._auto_port(cid)),
+                encap          = m_clean.get("encap",           self.default_encap),
                 bitrate        = self.global_bitrate,
-                loop           = m.get("loop",            self.default_loop),
+                loop           = m_clean.get("loop",            self.default_loop),
                 nic            = self.selected_nic,
-                pre_transcoded = m.get("pre_transcoded",  False),
+                pre_transcoded = m_clean.get("pre_transcoded",  False),
             )
-            self.metadata[cid] = {**m, "running": False}
-            logger.info(f"CH{cid + 1:02d} restored: {m.get('filename', '?')}")
+            self.metadata[cid] = {**m_clean, "running": False}
+            logger.info(f"CH{cid + 1:02d} restored: {m_clean.get('filename', '?')}")
 
     # ------------------------------------------------------------------
     # Address helpers

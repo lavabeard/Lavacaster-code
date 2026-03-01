@@ -90,6 +90,10 @@ if [ -d "$INSTALL_DIR" ]; then
     cp "$INSTALL_DIR/lavacast.config.json" /tmp/lavacast40_config_save.json
     log "lavacast.config.json saved temporarily (will be restored after clone)"
   fi
+  if [ -f "$INSTALL_DIR/lavacast_channels.json" ]; then
+    cp "$INSTALL_DIR/lavacast_channels.json" /tmp/lavacast40_channels_save.json
+    log "lavacast_channels.json saved temporarily (will be restored after clone)"
+  fi
   # Rotate old install to dated backup folder
   mv "$INSTALL_DIR" "$BACKUP_DIR"
   log "Old install → $BACKUP_DIR"
@@ -103,6 +107,10 @@ if [ -d "$INSTALL_DIR" ]; then
   if [ -f /tmp/lavacast40_config_save.json ]; then
     mv /tmp/lavacast40_config_save.json "$INSTALL_DIR/lavacast.config.json"
     log "lavacast.config.json restored (your custom settings kept)"
+  fi
+  if [ -f /tmp/lavacast40_channels_save.json ]; then
+    mv /tmp/lavacast40_channels_save.json "$INSTALL_DIR/lavacast_channels.json"
+    log "lavacast_channels.json restored (your channel assignments kept)"
   fi
   log "Code updated from repository."
 else

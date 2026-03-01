@@ -12,6 +12,7 @@ env/
 
 # Runtime data (managed by the app, not source-controlled)
 channel_state.json
+lavacast_channels.json
 media/
 frontend/static/thumbnails/
 logs/
