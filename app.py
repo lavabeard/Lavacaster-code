@@ -61,8 +61,17 @@ manager  = StreamManager(
     media_path      = cfg.STREAMING["media_path"],
 )
 
-# Global transcode profile — seeded from config, editable at runtime via /api/global_transcode
+# Global transcode profile — seeded from config, then overridden by any saved runtime state
 GLOBAL_TC: dict = dict(cfg.TRANSCODE)
+if manager.global_tc:                       # state file had a saved TC profile
+    GLOBAL_TC.update(manager.global_tc)
+manager.global_tc = dict(GLOBAL_TC)        # keep manager in sync for the first save
+
+
+def _persist_global_tc():
+    """Sync GLOBAL_TC into the manager and flush channel_state.json."""
+    manager.global_tc = dict(GLOBAL_TC)
+    manager._save_state()
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +163,7 @@ def global_transcode_api():
         for key in ("codec", "preset", "vbitrate", "abitrate", "resolution", "fps"):
             if key in d:
                 GLOBAL_TC[key] = str(d[key])
+        _persist_global_tc()
         logger.info("Global transcode settings updated", GLOBAL_TC)
         return jsonify({"status": "ok", "global_tc": GLOBAL_TC})
     return jsonify(GLOBAL_TC)

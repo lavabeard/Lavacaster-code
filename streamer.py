@@ -231,6 +231,7 @@ class StreamManager:
         self.global_bitrate = default_bitrate or None
         self.selected_nic   = selected_nic or None
         self.media_path     = os.path.expanduser(media_path)
+        self.global_tc      = {}          # populated by _load_state(); app.py seeds GLOBAL_TC from it
         logger.system("StreamManager v8 initialized")
         self._load_state()  # runtime state overwrites config defaults where saved
 
@@ -239,11 +240,34 @@ class StreamManager:
     # ------------------------------------------------------------------
 
     def _save_state(self):
+        """
+        Write the full runtime state to channel_state.json in a human-readable,
+        manually-editable format.  Keys prefixed with '_' are ignored on load.
+        """
+        # Strip transient fields that should never be hand-edited
+        _SKIP = {"running", "thumb"}
+        def _clean(m: dict) -> dict:
+            return {k: v for k, v in m.items() if k not in _SKIP}
+
         state = {
-            "global_bitrate": self.global_bitrate,
-            "selected_nic":   self.selected_nic,
-            "media_path":     self.media_path,
-            "channels":       {str(cid): m for cid, m in self.metadata.items()},
+            "_readme": (
+                "LavaCast 40 v8 — runtime state file.  "
+                "Edit manually then restart to apply.  "
+                "Keys starting with '_' are ignored on load."
+            ),
+            "global_transcode": {
+                "_readme": "Default transcode profile applied to uploads and re-transcodes",
+                **self.global_tc,
+            },
+            "global_streaming": {
+                "_readme": "Streaming output settings (NIC, bitrate cap, media path)",
+                "global_bitrate": self.global_bitrate or "",
+                "selected_nic":   self.selected_nic   or "",
+                "media_path":     self.media_path,
+            },
+            "channels": {
+                str(cid): _clean(m) for cid, m in self.metadata.items()
+            },
         }
         try:
             with open(_STATE_FILE, "w") as f:
@@ -261,10 +285,21 @@ class StreamManager:
             logger.error(f"State load failed: {e}")
             return
 
-        self.global_bitrate = state.get("global_bitrate")
-        self.selected_nic   = state.get("selected_nic")
-        if state.get("media_path"):
-            self.media_path = state["media_path"]
+        # Support both the new sectioned format and the old flat format
+        gs = state.get("global_streaming", {})
+        self.global_bitrate = (
+            gs.get("global_bitrate") or state.get("global_bitrate") or None
+        )
+        self.selected_nic = (
+            gs.get("selected_nic") or state.get("selected_nic") or None
+        )
+        mp = gs.get("media_path") or state.get("media_path")
+        if mp:
+            self.media_path = mp
+
+        # Restore global transcode profile (skip '_*' comment keys)
+        gt = state.get("global_transcode", {})
+        self.global_tc = {k: v for k, v in gt.items() if not k.startswith("_")}
 
         for cid_str, m in state.get("channels", {}).items():
             cid      = int(cid_str)
