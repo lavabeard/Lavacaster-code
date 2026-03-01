@@ -248,16 +248,34 @@ class StreamManager:
         """
         Write full runtime state to lavacast_channels.json — a human-readable,
         manually-editable config file.  Keys prefixed with '_' are comments and
-        are ignored on load.  Falls back to legacy channel_state.json name on
-        write failure.
+        are ignored on load.
         """
-        _SKIP = {"running", "thumb"}   # transient; never hand-edit these
-
         def _channel_entry(cid: int, m: dict) -> dict:
-            entry = {k: v for k, v in m.items() if k not in _SKIP}
-            entry["_label"]    = f"CH{cid + 1:02d}"
-            entry["thumbnail"] = os.path.join(_THUMB_DIR, f"ch{cid}.jpg")
-            return entry
+            return {
+                "_label":         f"CH{cid + 1:02d}",
+                "_hint_filepath": (
+                    "Playback file — transcoded .ts when pre_transcoded=true, "
+                    "otherwise the original upload"
+                ),
+                "_hint_src_path": (
+                    "Original uploaded file — used for retranscode and as a "
+                    "fallback if filepath is missing on restore"
+                ),
+                "filename":       m.get("filename",       ""),
+                "filepath":       m.get("filepath",       ""),
+                "src_path":       m.get("src_path",       ""),
+                "pre_transcoded": m.get("pre_transcoded", False),
+                "thumbnail":      os.path.join(_THUMB_DIR, f"ch{cid}.jpg"),
+                "ip":             m.get("ip",       ""),
+                "port":           m.get("port",     0),
+                "encap":          m.get("encap",    "udp"),
+                "loop":           m.get("loop",     True),
+                "bitrate":        m.get("bitrate",  ""),
+                "codec":          m.get("codec",    "copy"),
+                "preset":         m.get("preset",   "fast"),
+                "vbitrate":       m.get("vbitrate", "8M"),
+                "abitrate":       m.get("abitrate", "192k"),
+            }
 
         state = {
             "_readme": (
@@ -326,25 +344,43 @@ class StreamManager:
 
         for cid_str, m in state.get("channels", {}).items():
             cid     = int(cid_str)
-            # Strip comment keys (_label, _readme, thumbnail path, etc.) before storing
+            # Strip comment keys (_label, _hint_*, thumbnail path, etc.) before storing
             m_clean = {k: v for k, v in m.items() if not k.startswith("_") and k != "thumbnail"}
-            filepath = m_clean.get("filepath", "")
-            if not filepath or not os.path.exists(filepath):
+
+            filepath       = m_clean.get("filepath", "")
+            src_path       = m_clean.get("src_path", "")
+            pre_transcoded = m_clean.get("pre_transcoded", False)
+
+            # Determine playback file: use filepath (transcoded .ts) when it exists;
+            # fall back to src_path (original upload) if the transcoded copy is gone.
+            if filepath and os.path.exists(filepath):
+                playback = filepath
+            elif src_path and os.path.exists(src_path):
+                playback       = src_path
+                pre_transcoded = False
                 logger.warn(
-                    f"CH{cid + 1:02d} restore skipped — file missing: {filepath}"
+                    f"CH{cid + 1:02d} transcoded file missing — falling back to original: "
+                    f"{os.path.basename(src_path)}"
+                )
+            else:
+                logger.warn(
+                    f"CH{cid + 1:02d} restore skipped — no playable file found "
+                    f"(filepath={filepath!r}, src_path={src_path!r})"
                 )
                 continue
+
             self.channels[cid] = StreamChannel(
-                cid, filepath,
-                ip             = m_clean.get("ip",             self._auto_ip(cid)),
-                port           = m_clean.get("port",            self._auto_port(cid)),
-                encap          = m_clean.get("encap",           self.default_encap),
+                cid, playback,
+                ip             = m_clean.get("ip",   self._auto_ip(cid)),
+                port           = m_clean.get("port",  self._auto_port(cid)),
+                encap          = m_clean.get("encap",  self.default_encap),
                 bitrate        = self.global_bitrate,
-                loop           = m_clean.get("loop",            self.default_loop),
+                loop           = m_clean.get("loop",   self.default_loop),
                 nic            = self.selected_nic,
-                pre_transcoded = m_clean.get("pre_transcoded",  False),
+                pre_transcoded = pre_transcoded,
             )
-            self.metadata[cid] = {**m_clean, "running": False}
+            self.metadata[cid] = {**m_clean, "filepath": playback,
+                                   "pre_transcoded": pre_transcoded, "running": False}
             logger.info(f"CH{cid + 1:02d} restored: {m_clean.get('filename', '?')}")
 
     # ------------------------------------------------------------------

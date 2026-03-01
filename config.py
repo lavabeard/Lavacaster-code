@@ -38,7 +38,7 @@ _DEFAULTS: dict = {
     "transcode": {
         "codec":      "h264",
         "preset":     "fast",
-        "vbitrate":   "6M",
+        "vbitrate":   "8M",
         "abitrate":   "192k",
         "resolution": "1080p",
         "fps":        "original",
