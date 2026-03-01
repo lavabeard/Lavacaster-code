@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Runtime data (managed by the app, not source-controlled)
+channel_state.json
+media/
+frontend/static/thumbnails/
+logs/
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo

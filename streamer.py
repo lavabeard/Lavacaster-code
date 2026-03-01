@@ -203,23 +203,36 @@ class StreamChannel:
 
 class StreamManager:
     """
-    Owns all 40 StreamChannel instances plus in-flight TranscodeJobs.
+    Owns all StreamChannel instances plus in-flight TranscodeJobs.
 
     Channel IDs are 0-based integers.  The UI uses 1-based CH labels.
+    Pass keyword arguments from config.STREAMING to override defaults.
     """
 
-    MAX_CHANNELS = 40
-    BASE_PORT    = 5100
-
-    def __init__(self):
+    def __init__(
+        self,
+        max_channels:    int  = 40,
+        base_port:       int  = 5100,
+        multicast_base:  str  = "239.1.1",
+        default_encap:   str  = "udp",
+        default_loop:    bool = True,
+        default_bitrate: str  = "",
+        selected_nic:    str  = "",
+        media_path:      str  = "~/lavacast40/media",
+    ):
+        self.max_channels    = max_channels
+        self.base_port       = base_port
+        self.multicast_base  = multicast_base
+        self.default_encap   = default_encap
+        self.default_loop    = default_loop
         self.channels       = {}          # cid -> StreamChannel
         self.metadata       = {}          # cid -> dict of UI-visible state
         self.transcode_jobs = {}          # cid -> TranscodeJob (in-flight only)
-        self.global_bitrate = None
-        self.selected_nic   = None
-        self.media_path     = os.path.expanduser("~/lavacast40/media")
+        self.global_bitrate = default_bitrate or None
+        self.selected_nic   = selected_nic or None
+        self.media_path     = os.path.expanduser(media_path)
         logger.system("StreamManager v8 initialized")
-        self._load_state()
+        self._load_state()  # runtime state overwrites config defaults where saved
 
     # ------------------------------------------------------------------
     # State persistence
@@ -265,9 +278,9 @@ class StreamManager:
                 cid, filepath,
                 ip             = m.get("ip",             self._auto_ip(cid)),
                 port           = m.get("port",            self._auto_port(cid)),
-                encap          = m.get("encap",           "udp"),
+                encap          = m.get("encap",           self.default_encap),
                 bitrate        = self.global_bitrate,
-                loop           = m.get("loop",            True),
+                loop           = m.get("loop",            self.default_loop),
                 nic            = self.selected_nic,
                 pre_transcoded = m.get("pre_transcoded",  False),
             )
@@ -279,10 +292,10 @@ class StreamManager:
     # ------------------------------------------------------------------
 
     def _auto_ip(self, cid: int) -> str:
-        return f"239.1.1.{(cid % 254) + 1}"
+        return f"{self.multicast_base}.{(cid % 254) + 1}"
 
     def _auto_port(self, cid: int) -> int:
-        return self.BASE_PORT + (cid * 2)
+        return self.base_port + (cid * 2)
 
     # ------------------------------------------------------------------
     # Channel lifecycle
@@ -311,9 +324,9 @@ class StreamManager:
         else:
             self.channels[cid] = StreamChannel(
                 cid, filepath, ip, port,
-                encap          = prev.get("encap", "udp"),
+                encap          = prev.get("encap", self.default_encap),
                 bitrate        = self.global_bitrate,
-                loop           = prev.get("loop", True),
+                loop           = prev.get("loop",  self.default_loop),
                 nic            = self.selected_nic,
                 pre_transcoded = pre_transcoded,
             )
@@ -324,9 +337,9 @@ class StreamManager:
             src_path       = src_path or filepath,
             ip             = ip,
             port           = port,
-            encap          = prev.get("encap", "udp"),
+            encap          = prev.get("encap", self.default_encap),
             bitrate        = self.global_bitrate or "",
-            loop           = prev.get("loop", True),
+            loop           = prev.get("loop",  self.default_loop),
             running        = False,
             pre_transcoded = pre_transcoded,
             thumb          = f"/static/thumbnails/ch{cid}.jpg",
