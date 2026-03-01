@@ -969,7 +969,10 @@ async function toggleStream(i){
   updateStats();
 }
 async function startAll(){ await fetch('/api/start_all',{method:'POST'}); for(let i=0;i<MAX;i++) if(state[i].filename&&!state[i].transcoding){state[i].running=true;setRun(i);} updateStats(); addActivity('stream','Start All triggered'); }
-async function stopAll(){ await fetch('/api/stop_all',{method:'POST'}); for(let i=0;i<MAX;i++){state[i].running=false;setStop(i);} updateStats(); addActivity('stream','Stop All triggered'); }
+async function stopAll(){
+  if(!confirm('Stop all active streams?')) return;
+  await fetch('/api/stop_all',{method:'POST'}); for(let i=0;i<MAX;i++){state[i].running=false;setStop(i);} updateStats(); addActivity('stream','Stop All triggered');
+}
 
 async function removeCh(i){
   if(state[i].running) await fetch(`/api/stop/${i}`,{method:'POST'});
@@ -1174,8 +1177,9 @@ function syncStatus(){
   });
 }
 
-// On socket reconnect, re-sync channel states to recover any missed channel_ready events
-socket.io.on('reconnect',()=>{ syncStatus(); addActivity('system','Socket reconnected — syncing state'); });
+// socket.on('connect') fires on both initial connect and every reconnect, so
+// syncStatus() there covers the server-restart case automatically.
+socket.io.on('reconnect',()=>{ addActivity('system','Socket reconnected — syncing state'); });
 
 // WebSocket connection indicator — green orb = live, red orb = disconnected
 function _wsOk(){
@@ -1186,33 +1190,21 @@ function _wsLost(){
   document.getElementById('logo-orb').classList.add('ws-lost');
   const c=document.getElementById('ws-chip'); c.textContent='OFFLINE'; c.className='ws-chip lost';
 }
-socket.on('connect',    _wsOk);
+socket.on('connect',    ()=>{ _wsOk(); syncStatus(); });
 socket.on('disconnect', _wsLost);
 
+// Initial page load — restore global settings; channel cards + thumbnails are
+// handled by syncStatus() which fires via socket.on('connect') above.
 fetch('/api/status').then(r=>r.json()).then(d=>{
   if(d.bitrate_presets) presets=d.bitrate_presets;
   if(d.nics&&d.nics.length) populateNicDropdowns(d.nics,d.selected_nic||'',d.monitor_nic||'');
-  if(d.auto_start!==undefined){ const cb=document.getElementById('auto-start-cb'); cb.checked=!!d.auto_start; document.getElementById('auto-tog').classList.toggle('on',!!d.auto_start); }
-  for(const[cs,m] of Object.entries(d.channels||{})){
-    const i=parseInt(cs);
-    Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-      bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
-      preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
-    refreshCard(i);
-    if(m.filename){
-      document.getElementById(`bs-${i}`).disabled=false;
-      const img=document.getElementById(`img-${i}`);
-      const ph=document.getElementById(`ph-${i}`);
-      const tw=document.getElementById(`tw-${i}`);
-      img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
-      img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-      img.src='/api/thumbnail/'+i+'?t='+Date.now();
-    }
-    if(m.running) setRun(i);
+  if(d.auto_start!==undefined){
+    const cb=document.getElementById('auto-start-cb');
+    cb.checked=!!d.auto_start;
+    document.getElementById('auto-tog').classList.toggle('on',!!d.auto_start);
   }
   if(d.global_tc) Object.assign(globalTC,d.global_tc);
   loadGlobalTC();
-  updateStats(); addActivity('system','LavaCast 40 v8 UI connected');
 });
 </script>
 </body>
