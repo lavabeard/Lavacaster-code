@@ -238,6 +238,11 @@ class StreamManager:
         self.channel_prefs  = {}          # cid -> {codec,preset,vbitrate,abitrate}; persists even without a file
         self.monitor_nic    = ""          # NIC shown in the header bandwidth meters
         self.auto_start     = False       # start all channels automatically on server startup
+        # Safety: keep a raw-JSON copy of every channel entry loaded from disk.
+        # _save_state() merges this with current metadata instead of replacing,
+        # so channels whose media files are temporarily missing are never silently erased.
+        self._saved_channels: dict = {}
+        self._removed_cids:   set  = set()
         logger.system("StreamManager v8 initialized")
         self._load_state()  # runtime state overwrites config defaults where saved
 
@@ -300,9 +305,15 @@ class StreamManager:
                 "media_path":     self.media_path,
                 "auto_start":     self.auto_start,
             },
+            # Merge strategy: start with every channel entry we loaded from disk
+            # (preserves channels whose media files were temporarily missing),
+            # then override with current in-memory metadata.
+            # Channels explicitly removed via remove_channel() are excluded.
             "channels": {
-                str(cid): _channel_entry(cid, m)
-                for cid, m in self.metadata.items()
+                **{k: v for k, v in self._saved_channels.items()
+                   if int(k) not in self._removed_cids},
+                **{str(cid): _channel_entry(cid, m)
+                   for cid, m in self.metadata.items()},
             },
             "channel_prefs": {
                 "_readme": (
@@ -358,7 +369,13 @@ class StreamManager:
         gt = state.get("global_transcode", {})
         self.global_tc = {k: v for k, v in gt.items() if not k.startswith("_")}
 
-        for cid_str, m in state.get("channels", {}).items():
+        # Keep a raw copy of every channel entry from the file so _save_state()
+        # can merge rather than replace — prevents wiping channels whose media
+        # files are temporarily missing at load time.
+        raw_channels = state.get("channels", {})
+        self._saved_channels = dict(raw_channels)
+
+        for cid_str, m in raw_channels.items():
             cid     = int(cid_str)
             # Strip comment keys (_label, _hint_*, thumbnail path, etc.) before storing
             m_clean = {k: v for k, v in m.items() if not k.startswith("_") and k != "thumbnail"}
@@ -439,13 +456,15 @@ class StreamManager:
         src_path: str = None,
         codec: str = "copy",
         preset: str = "fast",
-        vbitrate: str = "6M",
+        vbitrate: str = "8M",
         abitrate: str = "192k",
     ) -> tuple[str, int]:
         """Register or update a channel.  Returns (ip, port)."""
         ip   = self._auto_ip(cid)
         port = self._auto_port(cid)
         prev = self.metadata.get(cid, {})
+        # If this channel was removed this session, re-adding it clears the exclusion
+        self._removed_cids.discard(cid)
 
         if cid in self.channels:
             self.channels[cid].filepath       = filepath
@@ -497,6 +516,9 @@ class StreamManager:
         self.stop(cid)
         self.channels.pop(cid, None)
         self.metadata.pop(cid, None)
+        # Mark as explicitly removed so _save_state() excludes it from the merge
+        self._removed_cids.add(cid)
+        self._saved_channels.pop(str(cid), None)
         logger.info(f"CH{cid + 1:02d} removed: {fname}")
         self._save_state()
 
