@@ -232,6 +232,8 @@ class StreamManager:
         self.selected_nic   = selected_nic or None
         self.media_path     = os.path.expanduser(media_path)
         self.global_tc      = {}          # populated by _load_state(); app.py seeds GLOBAL_TC from it
+        self.monitor_nic    = ""          # NIC shown in the header bandwidth meters
+        self.auto_start     = False       # start all channels automatically on server startup
         logger.system("StreamManager v8 initialized")
         self._load_state()  # runtime state overwrites config defaults where saved
 
@@ -263,7 +265,9 @@ class StreamManager:
                 "_readme": "Streaming output settings (NIC, bitrate cap, media path)",
                 "global_bitrate": self.global_bitrate or "",
                 "selected_nic":   self.selected_nic   or "",
+                "monitor_nic":    self.monitor_nic    or "",
                 "media_path":     self.media_path,
+                "auto_start":     self.auto_start,
             },
             "channels": {
                 str(cid): _clean(m) for cid, m in self.metadata.items()
@@ -293,6 +297,8 @@ class StreamManager:
         self.selected_nic = (
             gs.get("selected_nic") or state.get("selected_nic") or None
         )
+        self.monitor_nic = gs.get("monitor_nic") or ""
+        self.auto_start  = bool(gs.get("auto_start", False))
         mp = gs.get("media_path") or state.get("media_path")
         if mp:
             self.media_path = mp

@@ -74,6 +74,11 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:7px 10px}
 .btn-amber{background:var(--ember);color:#000}
 .btn:hover{filter:brightness(1.15)}.btn:active{transform:scale(.97)}
+.auto-tog{display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none;
+  font-family:var(--mono);font-size:.52rem;font-weight:700;letter-spacing:.1em;
+  color:var(--muted);text-transform:uppercase;padding:4px 2px;flex-shrink:0}
+.auto-tog input[type=checkbox]{accent-color:var(--lava);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+.auto-tog.on{color:var(--lava2)}
 
 .gstrip{display:flex;align-items:center;gap:10px;padding:5px 16px;
   background:rgba(124,58,237,.04);border-bottom:1px solid rgba(124,58,237,.1);flex-wrap:wrap}
@@ -187,17 +192,21 @@ input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
 .transcoding .tc-badge{display:block;animation:tcpulse 1s ease-in-out infinite}
 @keyframes tcpulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* Transcode progress — overlaid on thumbnail, doesn't hide it */
-.tc-prog{position:absolute;bottom:0;left:0;right:0;height:4px;
-  background:rgba(255,255,255,.08);display:none}
-.transcoding .tc-prog{display:block}
+/* Transcode progress strip — info bar at thumbnail bottom */
+.tc-prog{position:absolute;bottom:0;left:0;right:0;
+  background:rgba(0,0,0,.78);padding:3px 6px 4px;
+  display:none;flex-direction:column;gap:2px}
+.transcoding .tc-prog{display:flex}
+.tc-prog-row{display:flex;align-items:center;gap:5px;height:11px}
+.tc-codec-tag{font-family:var(--mono);font-size:.42rem;font-weight:800;letter-spacing:.08em;
+  color:var(--purple);text-transform:uppercase;flex-shrink:0;min-width:34px}
+.tc-prog-track{flex:1;height:4px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden}
 .tc-prog-fill{height:100%;width:0%;
-  background:linear-gradient(90deg,var(--purple),#ff6ec7);
-  transition:width .1s linear}
-.tc-pct-lbl{position:absolute;bottom:8px;right:6px;
-  font-family:var(--mono);font-size:.52rem;color:#fff;
-  background:rgba(0,0,0,.65);padding:2px 5px;border-radius:3px;display:none}
-.transcoding .tc-pct-lbl{display:block}
+  background:linear-gradient(90deg,var(--purple),#ff6ec7);transition:width .1s linear}
+.tc-pct-lbl{font-family:var(--mono);font-size:.46rem;font-weight:700;color:#fff;
+  flex-shrink:0;min-width:30px;text-align:right}
+.tc-eta-lbl{font-family:var(--mono);font-size:.4rem;color:var(--muted);
+  text-align:right;line-height:1;padding-bottom:1px}
 
 input[type=file]{display:none}
 
@@ -347,7 +356,7 @@ input[type=file]{display:none}
         <div class="bar-track"><div class="bar bar-mem" id="mem-bar"></div></div>
       </div>
       <div class="nic-wrap">
-        <select class="nic-sel" id="nic-monitor-sel" onchange="selMonitorNic=this.value;localStorage.setItem('lavacast_nic',this.value);renderNic()" title="NIC to monitor">
+        <select class="nic-sel" id="nic-monitor-sel" onchange="applyMonitorNic(this.value)" title="NIC to monitor">
           <option>Detecting…</option>
         </select>
         <div class="nic-stats">
@@ -359,6 +368,10 @@ input[type=file]{display:none}
 
     <div class="hdr-right">
       <div class="hdr-badge">LIVE <b id="s-live">0</b>&nbsp;·&nbsp;LOADED <b id="s-loaded">0</b></div>
+      <label class="auto-tog" id="auto-tog" title="Auto-start all channels when server starts">
+        <input type="checkbox" id="auto-start-cb" onchange="setAutoStart(this.checked)">
+        AUTO
+      </label>
       <button class="btn btn-lava" onclick="startAll()">ALL</button>
       <button class="btn btn-stop" onclick="stopAll()">■ ALL</button>
       <button class="btn btn-ghost" onclick="openMod('m-settings')" title="Settings">⚙</button>
@@ -660,22 +673,41 @@ function populatePresets(id,val){
   });
 }
 
-function populateNicDropdowns(nics,selNic){
+function populateNicDropdowns(nics,selNic,monNic){
   allNics=nics;
   const monSel=document.getElementById('nic-monitor-sel');
   if(!nicReady&&nics.length){
     monSel.innerHTML=''; nics.forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;monSel.appendChild(o);});
-    selMonitorNic=monSel.value; nicReady=true;
+    // Restore saved monitor NIC: prefer server value, fall back to localStorage
+    const saved=monNic||localStorage.getItem('lavacast_nic');
+    if(saved&&nics.includes(saved)){monSel.value=saved;selMonitorNic=saved;}
+    else{selMonitorNic=monSel.value;}
+    nicReady=true;
   }
   const strSel=document.getElementById('nic-stream-sel');
   strSel.innerHTML='<option value="">Auto (default route)</option>';
   nics.forEach(n=>{const o=document.createElement('option');o.value=n;o.text=n;if(n===selNic)o.selected=true;strSel.appendChild(o);});
 }
 
+function applyMonitorNic(nic){
+  selMonitorNic=nic;
+  localStorage.setItem('lavacast_nic',nic);
+  renderNic();
+  fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monitor_nic:nic})});
+}
+
 async function applyStreamNic(nic){
   await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nic})});
   toast(nic?`Stream NIC → ${nic}`:'Stream NIC → Auto');
   addActivity('info',nic?`Stream NIC set to ${nic}`:'Stream NIC set to Auto');
+}
+
+async function setAutoStart(val){
+  await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_start:val})});
+  const tog=document.getElementById('auto-tog');
+  tog.classList.toggle('on',val);
+  toast(val?'Auto-start enabled — channels will launch on server start':'Auto-start disabled');
+  addActivity('info',val?'Auto-start enabled':'Auto-start disabled');
 }
 
 (function(){
@@ -706,8 +738,14 @@ function cardHTML(i){
         <span class="pb-pct" id="pct-${i}">0%</span>
         <span class="up-eta" id="eta-${i}"></span>
       </div>
-      <div class="tc-prog" id="tcp-${i}"><div class="tc-prog-fill" id="tcf-${i}"></div></div>
-      <span class="tc-pct-lbl" id="tcpct-${i}"></span>
+      <div class="tc-prog" id="tcp-${i}">
+        <div class="tc-prog-row">
+          <span class="tc-codec-tag" id="tccodec-${i}"></span>
+          <div class="tc-prog-track"><div class="tc-prog-fill" id="tcf-${i}"></div></div>
+          <span class="tc-pct-lbl" id="tcpct-${i}">0%</span>
+        </div>
+        <div class="tc-eta-lbl" id="tceta-${i}"></div>
+      </div>
       <div class="hover-load">
         <label class="mini-btn" onclick="event.stopPropagation();triggerUp(${i})">⬆ Load</label>
       </div>
@@ -815,28 +853,33 @@ function uploadFile(i,inp,overwrite=false){
 // ── Socket events ─────────────────────────────────────────────────────────────
 socket.on('transcode_start',d=>{
   state[d.cid].transcoding=true;
-  // Thumbnail stays visible — only add the card-level transcoding class
   document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
   document.getElementById(`card-${d.cid}`).classList.add('transcoding');
-  // Reset thumbnail progress indicators
   document.getElementById(`tcf-${d.cid}`).style.width='0%';
-  document.getElementById(`tcpct-${d.cid}`).textContent=`${(d.codec||'').toUpperCase()} 0%`;
-  addActivity('transcode',`CH${d.cid+1} transcoding ${(d.codec||'').toUpperCase()} (${d.preset||''})`);
+  document.getElementById(`tcpct-${d.cid}`).textContent='0%';
+  document.getElementById(`tceta-${d.cid}`).textContent='';
+  const codecLabel=d.codec==='remux'?'REMUX':(d.codec||'').toUpperCase();
+  document.getElementById(`tccodec-${d.cid}`).textContent=codecLabel;
+  const verb=d.codec==='remux'?'Remuxing':'Transcoding';
+  addActivity('transcode',`CH${d.cid+1} ${verb} ${codecLabel}${d.preset&&d.codec!=='remux'?' ('+d.preset+')':''}`);
 });
 
 socket.on('transcode_progress',d=>{
   document.getElementById(`tcf-${d.cid}`).style.width=d.pct+'%';
+  document.getElementById(`tcpct-${d.cid}`).textContent=d.pct+'%';
   const eta=d.eta_secs||0;
-  let etaTxt='';
-  if(eta>0){ const m=Math.floor(eta/60),s=eta%60; etaTxt=' '+(m>0?`${m}m ${s}s`:`${s}s`); }
-  document.getElementById(`tcpct-${d.cid}`).textContent=`${d.pct}%${etaTxt}`;
+  if(eta>0){ const m=Math.floor(eta/60),s=String(eta%60).padStart(2,'0');
+    document.getElementById(`tceta-${d.cid}`).textContent=`ETA ${m>0?m+'m ':''}`+s+'s';
+  } else { document.getElementById(`tceta-${d.cid}`).textContent=''; }
 });
 
 socket.on('transcode_error',d=>{
   state[d.cid].transcoding=false;
   document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
   document.getElementById(`tcf-${d.cid}`).style.width='0%';
-  document.getElementById(`tcpct-${d.cid}`).textContent='';
+  document.getElementById(`tcpct-${d.cid}`).textContent='0%';
+  document.getElementById(`tccodec-${d.cid}`).textContent='';
+  document.getElementById(`tceta-${d.cid}`).textContent='';
   toast(`CH${d.cid+1} transcode error: ${d.error}`,true);
   addActivity('error',`CH${d.cid+1} transcode failed: ${d.error}`);
 });
@@ -855,7 +898,9 @@ socket.on('channel_ready',d=>{
   document.getElementById(`pct-${d.cid}`).textContent='';
   document.getElementById(`eta-${d.cid}`).textContent='';
   document.getElementById(`tcf-${d.cid}`).style.width='0%';
-  document.getElementById(`tcpct-${d.cid}`).textContent='';
+  document.getElementById(`tcpct-${d.cid}`).textContent='0%';
+  document.getElementById(`tccodec-${d.cid}`).textContent='';
+  document.getElementById(`tceta-${d.cid}`).textContent='';
   // Thumbnail — wait for actual load so a missing file doesn't hide the placeholder
   if(d.thumb){
     const img=document.getElementById(`img-${d.cid}`);
@@ -1146,7 +1191,8 @@ socket.on('disconnect', _wsLost);
 
 fetch('/api/status').then(r=>r.json()).then(d=>{
   if(d.bitrate_presets) presets=d.bitrate_presets;
-  if(d.nics&&d.nics.length) populateNicDropdowns(d.nics,d.selected_nic||'');
+  if(d.nics&&d.nics.length) populateNicDropdowns(d.nics,d.selected_nic||'',d.monitor_nic||'');
+  if(d.auto_start!==undefined){ const cb=document.getElementById('auto-start-cb'); cb.checked=!!d.auto_start; document.getElementById('auto-tog').classList.toggle('on',!!d.auto_start); }
   for(const[cs,m] of Object.entries(d.channels||{})){
     const i=parseInt(cs);
     Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
