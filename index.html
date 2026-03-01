@@ -1244,6 +1244,7 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
   }
   if(d.global_tc) Object.assign(globalTC,d.global_tc);
   loadGlobalTC();
+  if(d.media_path) document.getElementById('cfg-path').value=d.media_path;
 });
 </script>
 </body>
