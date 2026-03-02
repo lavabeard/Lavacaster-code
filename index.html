@@ -430,9 +430,9 @@ input[type=file]{display:none}
     <div class="tc-sep"></div>
     <div class="tc-br-wrap">
       <span class="tc-br-lbl">Bitrate</span>
-      <span class="tc-br-val" id="gtc-br-val">6 Mbps</span>
+      <span class="tc-br-val" id="gtc-br-val">8 Mbps</span>
       <input type="range" class="tc-slider" id="gtc-br-slider"
-             min="6" max="20" step="1" value="6" oninput="gtcBrUpdate()">
+             min="1" max="20" step="1" value="8" oninput="gtcBrUpdate()">
     </div>
     <div class="tc-sep"></div>
     <button class="btn-sm btn-sm-purple" onclick="saveGlobalTC()">SAVE</button>
@@ -617,11 +617,11 @@ let presets = [
 ];
 
 // Global transcode profile (mirrors server GLOBAL_TC)
-let globalTC={codec:'h264',preset:'fast',vbitrate:'6M',abitrate:'192k',resolution:'1080p',fps:'original'};
+let globalTC={codec:'h264',preset:'fast',vbitrate:'8M',abitrate:'192k',resolution:'1080p',fps:'original'};
 
 function defState(){
   return {filename:null,ip:null,port:null,encap:'udp',bitrate:'',loop:true,running:false,
-          codec:'copy',preset:'fast',vbitrate:'6M',abitrate:'192k',
+          codec:null,preset:'fast',vbitrate:'8M',abitrate:'192k',
           resolution:'1080p',fps:'original',transcoding:false};
 }
 
@@ -661,7 +661,7 @@ async function loadGlobalTC(){
     document.getElementById('gtc-preset').value = d.preset||'fast';
     document.getElementById('gtc-res').value    = d.resolution||'1080p';
     document.getElementById('gtc-fps').value    = d.fps||'original';
-    const mbps=parseInt((d.vbitrate||'6M').replace(/[^0-9]/g,''))||6;
+    const mbps=parseInt((d.vbitrate||'8M').replace(/[^0-9]/g,''))||8;
     document.getElementById('gtc-br-slider').value=mbps;
     document.getElementById('gtc-br-val').textContent=mbps+' Mbps';
     gtcCodecChange();
@@ -899,7 +899,7 @@ socket.on('channel_ready',d=>{
   Object.assign(s,{filename:d.filename,ip:d.ip,port:d.port,
     encap:d.encap,bitrate:d.bitrate,loop:d.loop,
     codec:d.codec||'copy',preset:d.preset||'fast',
-    vbitrate:d.vbitrate||'6M',abitrate:d.abitrate||'192k',
+    vbitrate:d.vbitrate||'8M',abitrate:d.abitrate||'192k',
     transcoding:false});
   // Clear upload overlay and transcode progress
   document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
@@ -1036,7 +1036,7 @@ function openChMod(i){
   populatePresets('e-br',s.bitrate||'');
   document.getElementById('e-codec').value=s.codec||'copy';
   document.getElementById('e-preset').value=s.preset||'fast';
-  document.getElementById('e-vbr').value=s.vbitrate||'4M';
+  document.getElementById('e-vbr').value=s.vbitrate||'8M';
   document.getElementById('e-abr').value=s.abitrate||'192k';
   toggleCodecOpts();
   // Show re-transcode button only if file loaded and codec not copy
@@ -1051,7 +1051,7 @@ async function saveChSettings(){
   // Save transcode prefs to local state (used on next upload or retranscode)
   state[i].codec    = document.getElementById('e-codec').value;
   state[i].preset   = document.getElementById('e-preset').value;
-  state[i].vbitrate = document.getElementById('e-vbr').value||'4M';
+  state[i].vbitrate = document.getElementById('e-vbr').value||'8M';
   state[i].abitrate = document.getElementById('e-abr').value||'192k';
   state[i].encap    = document.getElementById('e-enc').value;
   state[i].loop     = document.getElementById('e-loop').checked;
@@ -1080,7 +1080,7 @@ async function doRetranscode(){
   if(state[i].running){ toast('Stop the stream before re-transcoding.',true); return; }
   const codec   =document.getElementById('e-codec').value;
   const preset  =document.getElementById('e-preset').value;
-  const vbitrate=document.getElementById('e-vbr').value||'4M';
+  const vbitrate=document.getElementById('e-vbr').value||'8M';
   const abitrate=document.getElementById('e-abr').value||'192k';
   // Save to state
   Object.assign(state[i],{codec,preset,vbitrate,abitrate});
@@ -1172,7 +1172,7 @@ function syncStatus(){
       document.getElementById(`eta-${i}`).textContent='';
       Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
         bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
-        preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
+        preset:m.preset||'fast',vbitrate:m.vbitrate||'8M',abitrate:m.abitrate||'192k'});
       refreshCard(i);
       document.getElementById(`bs-${i}`).disabled=false;
       const img=document.getElementById(`img-${i}`);

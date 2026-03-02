@@ -130,7 +130,7 @@ def process_upload(
 
     codec      = global_tc.get("codec",      "h264")
     preset     = global_tc.get("preset",     "fast")
-    vbitrate   = global_tc.get("vbitrate",   "6M")
+    vbitrate   = global_tc.get("vbitrate",   "8M")
     abitrate   = global_tc.get("abitrate",   "192k")
     resolution = global_tc.get("resolution", "1080p")
     fps        = global_tc.get("fps",        "original")
