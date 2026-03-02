@@ -126,6 +126,36 @@ log "Directories created."
 log "Originals:  $APP_DIR/media/originals"
 log "Transcoded: $APP_DIR/media/transcoded"
 
+# Write a default lavacast_channels.json if one does not already exist.
+# (Upgrades preserve the existing file earlier in Step 3.)
+if [ ! -f "$APP_DIR/lavacast_channels.json" ]; then
+  cat > "$APP_DIR/lavacast_channels.json" << 'CHANJSON'
+{
+  "_readme": "LavaCast 40 v8 — channel assignments and runtime settings. Edit manually then restart to apply. Keys starting with '_' are comments; they are ignored on load.",
+  "_hint": "Channel IDs are 0-based internally. _label shows the display name (id 0 = CH01, id 39 = CH40).",
+  "global_transcode": {
+    "_readme": "Default transcode profile applied to uploads and re-transcodes",
+    "codec": "h264",
+    "preset": "fast",
+    "vbitrate": "8M",
+    "abitrate": "192k",
+    "resolution": "1080p",
+    "fps": "original"
+  },
+  "global_streaming": {
+    "_readme": "Streaming output settings — NIC, bitrate cap, media path, auto-start",
+    "global_bitrate": "",
+    "selected_nic": "",
+    "monitor_nic": "",
+    "media_path": "~/lavacast40/media",
+    "auto_start": false
+  },
+  "channels": {}
+}
+CHANJSON
+  log "lavacast_channels.json created with defaults."
+fi
+
 # ---------------------------------------------------------------------------
 header "STEP 5: Python Virtual Environment"
 python3 -m venv "$VENV_DIR"
