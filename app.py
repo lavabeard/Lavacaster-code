@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 """
 app.py — LavaCast 40 v8  |  Flask + Socket.IO entry point.
 
@@ -150,6 +153,7 @@ def status():
         "channel_prefs":   {str(k): v for k, v in manager.channel_prefs.items()},
         "global_bitrate":  manager.global_bitrate or "",
         "media_path":      manager.media_path,
+        "default_encap":   manager.default_encap,
         "bitrate_presets": BITRATE_PRESETS,
         "nics":            nics,
         "selected_nic":    manager.selected_nic or "",
@@ -188,6 +192,11 @@ def global_settings():
     if "monitor_nic" in d:
         manager.monitor_nic = d["monitor_nic"] or ""
         manager._save_state()
+    if "encap" in d:
+        if d["encap"] in ("udp", "rtp"):
+            manager.default_encap = d["encap"]
+            manager._save_state()
+            logger.info(f"Default encapsulation set to: {d['encap']}")
     if "auto_start" in d:
         manager.auto_start = bool(d["auto_start"])
         manager._save_state()
@@ -195,6 +204,7 @@ def global_settings():
     return jsonify({
         "global_bitrate": manager.global_bitrate or "",
         "media_path":     manager.media_path,
+        "default_encap":  manager.default_encap,
         "selected_nic":   manager.selected_nic or "",
         "monitor_nic":    manager.monitor_nic  or "",
         "auto_start":     manager.auto_start,
