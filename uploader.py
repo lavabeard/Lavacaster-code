@@ -237,6 +237,7 @@ def process_upload(
                 "copy" if remux else codec,
                 preset, vbitrate, abitrate, resolution, fps,
                 on_progress, on_complete, on_error,
+                filename=filename,
             )
 
     threading.Thread(target=_pipeline, daemon=True).start()

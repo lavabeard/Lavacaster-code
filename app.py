@@ -356,6 +356,7 @@ def retranscode(cid):
         cid, src_path, dst_path,
         codec, preset, vbitrate, abitrate, resolution, fps,
         on_progress, on_complete, on_error,
+        filename=meta["filename"],
     )
     logger.info(f"CH{cid + 1:02d} re-transcode started", {"codec": codec, "preset": preset})
     return jsonify({"status": "transcoding"})

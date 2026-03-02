@@ -555,9 +555,11 @@ class StreamManager:
         on_progress,
         on_complete,
         on_error,
+        filename: str = "",
     ):
         self.cancel_transcode(cid)
         job = TranscodeJob(cid, src, dst, codec, preset, vbitrate, abitrate, resolution, fps)
+        job.filename = filename
         self.transcode_jobs[cid] = job
         job.start(on_progress, on_complete, on_error)
 
@@ -572,11 +574,34 @@ class StreamManager:
 
     def get_status(self) -> dict:
         result = {}
+
+        # Channels that have been fully registered via add_channel()
         for cid, m in self.metadata.items():
             filepath = m.get("filepath", "")
-            result[str(cid)] = {
+            entry = {
                 **m,
-                "running":    self.is_running(cid),
-                "file_ready": bool(filepath and os.path.exists(filepath)),
+                "running":     self.is_running(cid),
+                "file_ready":  bool(filepath and os.path.exists(filepath)),
+                "transcoding": cid in self.transcode_jobs,
             }
+            if cid in self.transcode_jobs:
+                job = self.transcode_jobs[cid]
+                entry["tc_pct"]   = job.pct
+                entry["tc_eta"]   = job.eta
+                entry["tc_codec"] = job.codec
+            result[str(cid)] = entry
+
+        # In-flight jobs for channels not yet in metadata (fresh first-time upload)
+        for cid, job in self.transcode_jobs.items():
+            if str(cid) not in result:
+                result[str(cid)] = {
+                    "filename":    getattr(job, "filename", ""),
+                    "transcoding": True,
+                    "tc_pct":      job.pct,
+                    "tc_eta":      job.eta,
+                    "tc_codec":    job.codec,
+                    "running":     False,
+                    "file_ready":  False,
+                }
+
         return result
