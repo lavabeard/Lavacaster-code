@@ -135,6 +135,64 @@ pip install -r "$APP_DIR/requirements.txt" -q
 log "Python dependencies installed."
 
 # ---------------------------------------------------------------------------
+header "STEP 4b: Default Config Files"
+# lavacast.config.json ships in the repo and is preserved on upgrade.
+# lavacast_channels.json is created at runtime, but we seed it here so the
+# app has a valid state file to read before any channels are ever added.
+CHANNELS_JSON="$INSTALL_DIR/lavacast_channels.json"
+if [ ! -f "$CHANNELS_JSON" ]; then
+  cat > "$CHANNELS_JSON" << 'JEOF'
+{
+  "_readme": "LavaCast 40 v8 — channel assignments and runtime settings. Edit manually then restart to apply. Keys starting with '_' are comments; they are ignored on load.",
+  "_hint": "Channel IDs are 0-based internally. _label shows the display name (id 0 = CH01, id 39 = CH40).",
+  "global_transcode": {
+    "_readme": "Default transcode profile applied to uploads and re-transcodes",
+    "codec":      "h264",
+    "preset":     "fast",
+    "vbitrate":   "8M",
+    "abitrate":   "192k",
+    "resolution": "1080p",
+    "fps":        "original"
+  },
+  "global_streaming": {
+    "_readme": "Streaming output settings — NIC, bitrate cap, media path, encap, auto-start",
+    "global_bitrate": "",
+    "selected_nic":   "",
+    "monitor_nic":    "",
+    "media_path":     "~/lavacast40/media",
+    "default_encap":  "udp",
+    "auto_start":     false
+  },
+  "channels": {},
+  "channel_prefs": {
+    "_readme": "Per-channel transcode codec preference — persisted even when no file is loaded. Applied automatically on next upload to that channel."
+  }
+}
+JEOF
+  log "Default lavacast_channels.json created."
+else
+  log "lavacast_channels.json already present — not overwritten."
+fi
+
+# ---------------------------------------------------------------------------
+header "STEP 5b: Socket.IO Client Library"
+SIOJS="$APP_DIR/frontend/static/socket.io.min.js"
+SIOURL="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"
+if [ ! -f "$SIOJS" ]; then
+  if command -v curl &>/dev/null; then
+    curl -fsSL "$SIOURL" -o "$SIOJS" 2>/dev/null && log "socket.io.min.js downloaded." \
+      || log "WARNING: curl could not download socket.io.min.js — CDN fallback will be used."
+  elif command -v wget &>/dev/null; then
+    wget -q "$SIOURL" -O "$SIOJS" 2>/dev/null && log "socket.io.min.js downloaded." \
+      || log "WARNING: wget could not download socket.io.min.js — CDN fallback will be used."
+  else
+    log "WARNING: curl/wget not found — socket.io.min.js not downloaded; CDN fallback will be used."
+  fi
+else
+  log "socket.io.min.js already present."
+fi
+
+# ---------------------------------------------------------------------------
 header "STEP 6: systemd Service"
 sudo tee "$SERVICE_FILE" > /dev/null << SVCEOF
 [Unit]

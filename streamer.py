@@ -304,6 +304,7 @@ class StreamManager:
                 "monitor_nic":    self.monitor_nic    or "",
                 "media_path":     self.media_path,
                 "auto_start":     self.auto_start,
+                "default_encap":  self.default_encap,
             },
             # Merge strategy: start with every channel entry we loaded from disk
             # (preserves channels whose media files were temporarily missing),
@@ -359,8 +360,11 @@ class StreamManager:
         self.selected_nic = (
             gs.get("selected_nic") or state.get("selected_nic") or None
         )
-        self.monitor_nic = gs.get("monitor_nic") or ""
-        self.auto_start  = bool(gs.get("auto_start", False))
+        self.monitor_nic  = gs.get("monitor_nic") or ""
+        self.auto_start   = bool(gs.get("auto_start", False))
+        de = gs.get("default_encap") or state.get("default_encap")
+        if de in ("udp", "rtp"):
+            self.default_encap = de
         mp = gs.get("media_path") or state.get("media_path")
         if mp:
             self.media_path = mp
