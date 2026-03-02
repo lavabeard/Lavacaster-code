@@ -78,6 +78,13 @@ def _persist_global_tc():
     manager._save_state()
 
 
+# Bootstrap lavacast_channels.json on first launch so the file exists
+# before any channel is added (upgrades preserve the existing file).
+if not os.path.exists(os.path.join(BASE_DIR, "lavacast_channels.json")):
+    _persist_global_tc()
+    logger.system("Created lavacast_channels.json with default settings")
+
+
 # ---------------------------------------------------------------------------
 # Background: metrics loop (real OS thread — safe under eventlet)
 # ---------------------------------------------------------------------------
