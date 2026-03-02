@@ -218,6 +218,10 @@ input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
   flex-shrink:0;min-width:30px;text-align:right}
 .tc-eta-lbl{font-family:var(--mono);font-size:.4rem;color:var(--muted);
   text-align:right;line-height:1;padding-bottom:1px}
+.tc-prog-fill.tc-fill-done{background:linear-gradient(90deg,#22c55e,#4ade80);transition:width .3s ease}
+.tc-pct-lbl.tc-done-lbl{color:#4ade80}
+@keyframes tcflash{0%{box-shadow:inset 0 0 0 1px rgba(34,197,94,0)}40%{box-shadow:inset 0 0 0 2px rgba(34,197,94,.75)}100%{box-shadow:inset 0 0 0 1px rgba(34,197,94,0)}}
+.tc-flash{animation:tcflash 1.8s ease-out forwards}
 
 input[type=file]{display:none}
 
@@ -902,29 +906,38 @@ socket.on('channel_ready',d=>{
     codec:d.codec||'copy',preset:d.preset||'fast',
     vbitrate:d.vbitrate||'8M',abitrate:d.abitrate||'192k',
     transcoding:false});
-  // Clear upload overlay and transcode progress
+  // Clear upload overlay immediately
   document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
-  document.getElementById(`card-${d.cid}`).classList.remove('transcoding');
   document.getElementById(`pb-${d.cid}`).style.width='0%';
   document.getElementById(`pct-${d.cid}`).textContent='';
   document.getElementById(`eta-${d.cid}`).textContent='';
-  document.getElementById(`tcf-${d.cid}`).style.width='0%';
-  document.getElementById(`tcpct-${d.cid}`).textContent='0%';
-  document.getElementById(`tccodec-${d.cid}`).textContent='';
-  document.getElementById(`tceta-${d.cid}`).textContent='';
-  // Thumbnail — wait for actual load so a missing file doesn't hide the placeholder
-  if(d.thumb){
-    const img=document.getElementById(`img-${d.cid}`);
-    const ph=document.getElementById(`ph-${d.cid}`);
-    const tw=document.getElementById(`tw-${d.cid}`);
-    img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
-    img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-    img.src=d.thumb;
-  }
-  document.getElementById(`bs-${d.cid}`).disabled=false;
-  refreshCard(d.cid); updateStats();
+  // Phase 1: snap bar to 100%, go green, show "✓ Done" — gives clear completion signal
+  const fill=document.getElementById(`tcf-${d.cid}`);
+  const pctLbl=document.getElementById(`tcpct-${d.cid}`);
+  fill.style.width='100%'; fill.classList.add('tc-fill-done');
+  pctLbl.textContent='✓ Done'; pctLbl.classList.add('tc-done-lbl');
+  document.getElementById(`tceta-${d.cid}`).textContent='Transcoding complete';
+  document.getElementById(`card-${d.cid}`).classList.add('tc-flash');
   addActivity('info',`CH${d.cid+1} ready: ${d.filename} [${(d.codec||'copy').toUpperCase()}]`);
-  toast(`CH${d.cid+1} ready: ${d.filename}`);
+  toast(`CH${d.cid+1} transcode complete`,'tc');
+  // Phase 2: after brief display, collapse the strip and pop in the thumbnail
+  setTimeout(()=>{
+    document.getElementById(`card-${d.cid}`).classList.remove('transcoding','tc-flash');
+    fill.style.width='0%'; fill.classList.remove('tc-fill-done');
+    pctLbl.textContent='0%'; pctLbl.classList.remove('tc-done-lbl');
+    document.getElementById(`tccodec-${d.cid}`).textContent='';
+    document.getElementById(`tceta-${d.cid}`).textContent='';
+    if(d.thumb){
+      const img=document.getElementById(`img-${d.cid}`);
+      const ph=document.getElementById(`ph-${d.cid}`);
+      const tw=document.getElementById(`tw-${d.cid}`);
+      img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
+      img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
+      img.src=d.thumb;
+    }
+    document.getElementById(`bs-${d.cid}`).disabled=false;
+    refreshCard(d.cid); updateStats();
+  },1800);
 });
 
 socket.on('stream_stopped',d=>{ state[d.cid].running=false; setStop(d.cid); updateStats(); addActivity('stream',`CH${d.cid+1} stopped`); });
