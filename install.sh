@@ -135,6 +135,24 @@ pip install -r "$APP_DIR/requirements.txt" -q
 log "Python dependencies installed."
 
 # ---------------------------------------------------------------------------
+header "STEP 5b: Socket.IO Client Library"
+SIOJS="$APP_DIR/frontend/static/socket.io.min.js"
+SIOURL="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"
+if [ ! -f "$SIOJS" ]; then
+  if command -v curl &>/dev/null; then
+    curl -fsSL "$SIOURL" -o "$SIOJS" 2>/dev/null && log "socket.io.min.js downloaded." \
+      || log "WARNING: curl could not download socket.io.min.js — CDN fallback will be used."
+  elif command -v wget &>/dev/null; then
+    wget -q "$SIOURL" -O "$SIOJS" 2>/dev/null && log "socket.io.min.js downloaded." \
+      || log "WARNING: wget could not download socket.io.min.js — CDN fallback will be used."
+  else
+    log "WARNING: curl/wget not found — socket.io.min.js not downloaded; CDN fallback will be used."
+  fi
+else
+  log "socket.io.min.js already present."
+fi
+
+# ---------------------------------------------------------------------------
 header "STEP 6: systemd Service"
 sudo tee "$SERVICE_FILE" > /dev/null << SVCEOF
 [Unit]
