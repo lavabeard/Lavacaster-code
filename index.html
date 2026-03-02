@@ -499,6 +499,18 @@ input[type=file]{display:none}
   <div class="ap-body" id="ap-body"><div class="ap-empty">No activity yet.</div></div>
 </div>
 
+<!-- STOP ALL CONFIRM MODAL -->
+<div class="mbg" id="m-stop-confirm">
+  <div class="modal" style="width:320px">
+    <div class="modal-title">■ Stop All Streams</div>
+    <p style="font-size:.72rem;color:var(--fg);margin:0 0 20px;line-height:1.6">Stop all active streams?<br>They can be restarted individually or with the ALL button.</p>
+    <div class="ma">
+      <button class="btn btn-ghost" onclick="closeMod('m-stop-confirm')">Cancel</button>
+      <button class="btn btn-stop"  onclick="confirmStopAll()">■ Stop All</button>
+    </div>
+  </div>
+</div>
+
 <!-- SETTINGS MODAL -->
 <div class="mbg" id="m-settings">
   <div class="modal">
@@ -1002,9 +1014,12 @@ async function toggleStream(i){
   updateStats();
 }
 async function startAll(){ await fetch('/api/start_all',{method:'POST'}); for(let i=0;i<MAX;i++) if(state[i].filename&&!state[i].transcoding){state[i].running=true;setRun(i);} updateStats(); addActivity('stream','Start All triggered'); }
-async function stopAll(){
-  if(!confirm('Stop all active streams?')) return;
-  await fetch('/api/stop_all',{method:'POST'}); for(let i=0;i<MAX;i++){state[i].running=false;setStop(i);} updateStats(); addActivity('stream','Stop All triggered');
+function stopAll(){ openMod('m-stop-confirm'); }
+async function confirmStopAll(){
+  closeMod('m-stop-confirm');
+  await fetch('/api/stop_all',{method:'POST'});
+  addActivity('stream','Stop All triggered');
+  // UI (setStop + updateStats) comes solely from the all_stopped socket event
 }
 
 async function removeCh(i){
