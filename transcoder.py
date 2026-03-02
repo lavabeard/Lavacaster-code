@@ -252,7 +252,7 @@ class TranscodeJob:
         dst: str,
         codec: str = "h264",
         preset: str = "fast",
-        vbitrate: str = "6M",
+        vbitrate: str = "8M",
         abitrate: str = "192k",
         resolution: str = "original",
         fps: str = "original",

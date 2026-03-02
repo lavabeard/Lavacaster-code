@@ -156,12 +156,10 @@ class StreamChannel:
         if self.pre_transcoded or not self.bitrate:
             cmd += ["-c", "copy"]
         else:
+            # Rate-cap via MPEG-TS mux rate (stream-copy only; re-encoding happens
+            # at transcode time, not at stream time).
             kbps = self._to_kbps()
-            cmd += [
-                "-b:v", self.bitrate,
-                "-maxrate", self.bitrate,
-                "-bufsize", f"{kbps * 2}k",
-            ]
+            cmd += ["-c", "copy", "-muxrate", str(kbps * 1000)]
         cmd += ["-f", fmt, url]
         return cmd
 
@@ -183,7 +181,7 @@ class StreamChannel:
             return None
 
     def _to_kbps(self) -> int:
-        b = str(self.bitrate or "4M").upper()
+        b = str(self.bitrate or "8M").upper()
         if b.endswith("M"): return int(float(b[:-1]) * 1000)
         if b.endswith("K"): return int(b[:-1])
         return 4000
@@ -410,7 +408,7 @@ class StreamManager:
         src_path: str = None,
         codec: str = "copy",
         preset: str = "fast",
-        vbitrate: str = "6M",
+        vbitrate: str = "8M",
         abitrate: str = "192k",
     ) -> tuple[str, int]:
         """Register or update a channel.  Returns (ip, port)."""
