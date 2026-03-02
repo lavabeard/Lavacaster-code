@@ -26,6 +26,16 @@ def cpu_percent(s1, s2):
     return round((1.0 - idle / total) * 100.0, 1)
 
 
+def read_nic_speed(iface: str) -> int:
+    """Return NIC link speed in Mbps from sysfs, or 0 if unavailable."""
+    try:
+        with open(f"/sys/class/net/{iface}/speed") as f:
+            v = int(f.read().strip())
+            return v if v > 0 else 0
+    except Exception:
+        return 0
+
+
 def read_net_dev():
     result = {}
     with open("/proc/net/dev") as f:
@@ -80,8 +90,9 @@ def collect(interval=1.0):
         rx1, tx1 = net1[iface]
         rx2, tx2 = net2[iface]
         nics[iface] = {
-            "tx_mbps": round((tx2 - tx1) * 8 / 1_000_000 / elapsed, 3),
-            "rx_mbps": round((rx2 - rx1) * 8 / 1_000_000 / elapsed, 3),
+            "tx_mbps":    round((tx2 - tx1) * 8 / 1_000_000 / elapsed, 3),
+            "rx_mbps":    round((rx2 - rx1) * 8 / 1_000_000 / elapsed, 3),
+            "speed_mbps": read_nic_speed(iface),
         }
 
     return {
