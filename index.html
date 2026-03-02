@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>LavaCast</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Creepster&family=Rubik:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-<script src="/static/socket.io.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js'"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Creepster&family=Rubik:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
 <style>
 :root{
   --bg:#06050f;--surface:#0c0b18;--card:#100e1e;--border:#1e1a30;--border2:#2d2848;
@@ -35,7 +35,7 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .ws-chip.ok{color:#22c55e;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
 .ws-chip.lost{color:#ff3c3c;border:1px solid rgba(255,60,60,.4);background:rgba(255,60,60,.08);animation:ws-blink .8s ease-in-out infinite}
 @keyframes ws-blink{0%,100%{opacity:1}50%{opacity:.3}}
-.logo-name{font-family:'Russo One','Impact',sans-serif;font-size:1.9rem;font-weight:400;
+.logo-name{font-family:'Bebas Neue','Impact',sans-serif;font-size:2.1rem;font-weight:400;
   letter-spacing:.18em;text-transform:uppercase;color:#f2e8d8;
   text-shadow:
     0 0 6px rgba(255,240,220,.35),
@@ -215,9 +215,8 @@ input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
   background:linear-gradient(90deg,var(--purple),#ff6ec7);transition:width .1s linear}
 .tc-pct-lbl{font-family:var(--mono);font-size:.46rem;font-weight:700;color:#fff;
   flex-shrink:0;min-width:30px;text-align:right}
-.tc-stats-row{display:flex;align-items:center;gap:6px;padding-bottom:1px}
-.tc-fps-lbl,.tc-spd-lbl,.tc-eta-lbl{font-family:var(--mono);font-size:.4rem;color:var(--muted);line-height:1}
-.tc-eta-lbl{margin-left:auto}
+.tc-eta-lbl{font-family:var(--mono);font-size:.4rem;color:var(--muted);
+  text-align:right;line-height:1;padding-bottom:1px}
 
 input[type=file]{display:none}
 
@@ -602,7 +601,7 @@ input[type=file]{display:none}
 
 <script>
 const socket = io();
-const MAX    = Number("{{ max_channels }}") || 40;
+const MAX    = {{ max_channels }};
 const state  = {};
 let selMonitorNic = null;
 let nicCache      = {};
@@ -618,11 +617,11 @@ let presets = [
 ];
 
 // Global transcode profile (mirrors server GLOBAL_TC)
-let globalTC={codec:'h264',preset:'fast',vbitrate:'8M',abitrate:'192k',resolution:'1080p',fps:'original'};
+let globalTC={codec:'h264',preset:'fast',vbitrate:'6M',abitrate:'192k',resolution:'1080p',fps:'original'};
 
 function defState(){
   return {filename:null,ip:null,port:null,encap:'udp',bitrate:'',loop:true,running:false,
-          codec:'copy',preset:'fast',vbitrate:'8M',abitrate:'192k',
+          codec:'copy',preset:'fast',vbitrate:'6M',abitrate:'192k',
           resolution:'1080p',fps:'original',transcoding:false};
 }
 
@@ -662,7 +661,7 @@ async function loadGlobalTC(){
     document.getElementById('gtc-preset').value = d.preset||'fast';
     document.getElementById('gtc-res').value    = d.resolution||'1080p';
     document.getElementById('gtc-fps').value    = d.fps||'original';
-    const mbps=parseInt((d.vbitrate||'8M').replace(/[^0-9]/g,''))||8;
+    const mbps=parseInt((d.vbitrate||'6M').replace(/[^0-9]/g,''))||6;
     document.getElementById('gtc-br-slider').value=mbps;
     document.getElementById('gtc-br-val').textContent=mbps+' Mbps';
     gtcCodecChange();
@@ -755,11 +754,7 @@ function cardHTML(i){
           <div class="tc-prog-track"><div class="tc-prog-fill" id="tcf-${i}"></div></div>
           <span class="tc-pct-lbl" id="tcpct-${i}">0%</span>
         </div>
-        <div class="tc-stats-row">
-          <span class="tc-fps-lbl" id="tcfps-${i}"></span>
-          <span class="tc-spd-lbl" id="tcspd-${i}"></span>
-          <span class="tc-eta-lbl" id="tceta-${i}"></span>
-        </div>
+        <div class="tc-eta-lbl" id="tceta-${i}"></div>
       </div>
       <div class="hover-load">
         <label class="mini-btn" onclick="event.stopPropagation();triggerUp(${i})">⬆ Load</label>
@@ -882,17 +877,9 @@ socket.on('transcode_start',d=>{
 socket.on('transcode_progress',d=>{
   document.getElementById(`tcf-${d.cid}`).style.width=d.pct+'%';
   document.getElementById(`tcpct-${d.cid}`).textContent=d.pct+'%';
-  // fps
-  const fps=parseFloat(d.fps||'0');
-  document.getElementById(`tcfps-${d.cid}`).textContent=fps>0?fps.toFixed(0)+' fps':'';
-  // encode speed (e.g. "1.23x")
-  const spd=String(d.speed||'').replace('x','');
-  const spdN=parseFloat(spd);
-  document.getElementById(`tcspd-${d.cid}`).textContent=spdN>0?spdN.toFixed(2)+'×':'';
-  // eta
   const eta=d.eta_secs||0;
   if(eta>0){ const m=Math.floor(eta/60),s=String(eta%60).padStart(2,'0');
-    document.getElementById(`tceta-${d.cid}`).textContent=`ETA ${m>0?m+'m ':''}`+s+'s`;
+    document.getElementById(`tceta-${d.cid}`).textContent=`ETA ${m>0?m+'m ':''}`+s+'s';
   } else { document.getElementById(`tceta-${d.cid}`).textContent=''; }
 });
 
@@ -902,8 +889,6 @@ socket.on('transcode_error',d=>{
   document.getElementById(`tcf-${d.cid}`).style.width='0%';
   document.getElementById(`tcpct-${d.cid}`).textContent='0%';
   document.getElementById(`tccodec-${d.cid}`).textContent='';
-  document.getElementById(`tcfps-${d.cid}`).textContent='';
-  document.getElementById(`tcspd-${d.cid}`).textContent='';
   document.getElementById(`tceta-${d.cid}`).textContent='';
   toast(`CH${d.cid+1} transcode error: ${d.error}`,true);
   addActivity('error',`CH${d.cid+1} transcode failed: ${d.error}`);
@@ -914,7 +899,7 @@ socket.on('channel_ready',d=>{
   Object.assign(s,{filename:d.filename,ip:d.ip,port:d.port,
     encap:d.encap,bitrate:d.bitrate,loop:d.loop,
     codec:d.codec||'copy',preset:d.preset||'fast',
-    vbitrate:d.vbitrate||'8M',abitrate:d.abitrate||'192k',
+    vbitrate:d.vbitrate||'6M',abitrate:d.abitrate||'192k',
     transcoding:false});
   // Clear upload overlay and transcode progress
   document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
@@ -925,8 +910,6 @@ socket.on('channel_ready',d=>{
   document.getElementById(`tcf-${d.cid}`).style.width='0%';
   document.getElementById(`tcpct-${d.cid}`).textContent='0%';
   document.getElementById(`tccodec-${d.cid}`).textContent='';
-  document.getElementById(`tcfps-${d.cid}`).textContent='';
-  document.getElementById(`tcspd-${d.cid}`).textContent='';
   document.getElementById(`tceta-${d.cid}`).textContent='';
   // Thumbnail — wait for actual load so a missing file doesn't hide the placeholder
   if(d.thumb){
@@ -1116,10 +1099,7 @@ function closeMod(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.mbg').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
 async function saveSettings(){
-  const body={
-    media_path: document.getElementById('cfg-path').value.trim(),
-    encap:      document.getElementById('cfg-enc').value,
-  };
+  const body={media_path:document.getElementById('cfg-path').value.trim()};
   const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json(); if(d.error){toast(d.error,true);return;}
   closeMod('m-settings'); toast('Settings saved.');
@@ -1180,7 +1160,6 @@ function toast(msg,errOrType=false){
 // to recover any channel_ready events that were missed during a disconnection.
 function syncStatus(){
   fetch('/api/status').then(r=>r.json()).then(d=>{
-    // Restore loaded channels
     for(const[cs,m] of Object.entries(d.channels||{})){
       const i=parseInt(cs);
       if(!m.filename) continue;
@@ -1193,7 +1172,7 @@ function syncStatus(){
       document.getElementById(`eta-${i}`).textContent='';
       Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
         bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
-        preset:m.preset||'fast',vbitrate:m.vbitrate||'8M',abitrate:m.abitrate||'192k'});
+        preset:m.preset||'fast',vbitrate:m.vbitrate||'6M',abitrate:m.abitrate||'192k'});
       refreshCard(i);
       document.getElementById(`bs-${i}`).disabled=false;
       const img=document.getElementById(`img-${i}`);
@@ -1203,17 +1182,6 @@ function syncStatus(){
       img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
       img.src='/api/thumbnail/'+i+'?t='+Date.now();
       if(m.running) setRun(i); else setStop(i);
-    }
-    // Restore codec pills for empty channels that have a saved preference
-    for(const[cs,p] of Object.entries(d.channel_prefs||{})){
-      const i=parseInt(cs);
-      if(!state[i]||state[i].filename) continue;   // skip loaded channels (already restored above)
-      state[i].codec    = p.codec    || 'copy';
-      state[i].preset   = p.preset   || 'fast';
-      state[i].vbitrate = p.vbitrate || '8M';
-      state[i].abitrate = p.abitrate || '192k';
-      document.getElementById(`pco-${i}`).textContent =
-        p.codec==='h264'?'H.264':p.codec==='h265'?'H.265':'Passthrough';
     }
     updateStats();
   });
@@ -1247,8 +1215,6 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
   }
   if(d.global_tc) Object.assign(globalTC,d.global_tc);
   loadGlobalTC();
-  if(d.media_path) document.getElementById('cfg-path').value=d.media_path;
-  if(d.default_encap) document.getElementById('cfg-enc').value=d.default_encap;
 });
 </script>
 </body>

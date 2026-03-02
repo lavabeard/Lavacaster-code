@@ -199,13 +199,11 @@ def process_upload(
                 "preset": "copy"  if remux else preset,
             })
 
-            def on_progress(cid, pct, eta_secs=0, fps="", speed=""):
+            def on_progress(cid, pct, eta_secs=0):
                 socketio.emit("transcode_progress", {
                     "cid":      cid,
                     "pct":      pct,
                     "eta_secs": eta_secs,
-                    "fps":      fps,
-                    "speed":    speed,
                 })
 
             def on_complete(cid, filepath):
