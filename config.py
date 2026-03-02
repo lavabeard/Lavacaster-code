@@ -27,8 +27,8 @@ _DEFAULTS: dict = {
     },
     "streaming": {
         "max_channels":    40,
-        "base_port":       5100,
-        "multicast_base":  "239.1.1",
+        "base_port":       1234,
+        "multicast_base":  "239.252.100",
         "default_encap":   "udp",
         "default_loop":    True,
         "default_bitrate": "",

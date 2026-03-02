@@ -41,9 +41,9 @@ No `src/` directory, no subdirectories for Python modules — everything lives i
 | Constant | Value | Location |
 |---|---|---|
 | `MAX_CHANNELS` | 40 | `app.py` |
-| `BASE_PORT` | 5100 | `app.py` |
+| `BASE_PORT` | 1234 | `config.py` |
 | Server port | 5000 | `app.py` (socketio.run) |
-| Multicast base | `239.1.1.x` | `streamer.py` |
+| Multicast base | `239.252.100.x` | `config.py` / `streamer.py` |
 | Max upload size | 20 GB | `app.py` |
 | Log max lines | 2000 | `logger.py` |
 | Thumbnail size | 320×180 px | `uploader.py` |
@@ -51,8 +51,8 @@ No `src/` directory, no subdirectories for Python modules — everything lives i
 **Channel ID (`cid`):** 0-based integer (0–39). The UI displays channels as `CH01`–`CH40` (1-based).
 
 **Auto-assigned multicast:**
-- IP: `239.1.1.{(cid % 254) + 1}`
-- Port: `5100 + (cid * 2)`
+- IP: `239.252.100.{cid + 1}` — CH01 = `.1`, CH40 = `.40`
+- Port: `1234` (same for all channels — receivers distinguish streams by joining the per-channel multicast group)
 
 ---
 

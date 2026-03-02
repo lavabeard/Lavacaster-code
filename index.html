@@ -1189,7 +1189,9 @@ function syncStatus(){
 
 // socket.on('connect') fires on both initial connect and every reconnect, so
 // syncStatus() there covers the server-restart case automatically.
-socket.io.on('reconnect',()=>{ addActivity('system','Socket reconnected — syncing state'); });
+// _wasDisconnected guards against a spurious "reconnected" log on the
+// very first page load (which is a connect, not a re-connect).
+let _wasDisconnected = false;
 
 // WebSocket connection indicator — green orb = live, red orb = disconnected
 function _wsOk(){
@@ -1200,8 +1202,14 @@ function _wsLost(){
   document.getElementById('logo-orb').classList.add('ws-lost');
   const c=document.getElementById('ws-chip'); c.textContent='OFFLINE'; c.className='ws-chip lost';
 }
-socket.on('connect',    ()=>{ _wsOk(); syncStatus(); });
-socket.on('disconnect', _wsLost);
+socket.on('connect', ()=>{
+  _wsOk(); syncStatus();
+  if(_wasDisconnected){ addActivity('system','Socket reconnected — state synced'); _wasDisconnected=false; }
+});
+socket.on('disconnect', ()=>{
+  _wsLost();
+  if(!_wasDisconnected){ addActivity('system','Socket disconnected — waiting to reconnect…'); _wasDisconnected=true; }
+});
 
 // Initial page load — restore global settings; channel cards + thumbnails are
 // handled by syncStatus() which fires via socket.on('connect') above.

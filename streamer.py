@@ -217,8 +217,8 @@ class StreamManager:
     def __init__(
         self,
         max_channels:    int  = 40,
-        base_port:       int  = 5100,
-        multicast_base:  str  = "239.1.1",
+        base_port:       int  = 1234,
+        multicast_base:  str  = "239.252.100",
         default_encap:   str  = "udp",
         default_loop:    bool = True,
         default_bitrate: str  = "",
@@ -390,10 +390,12 @@ class StreamManager:
     # ------------------------------------------------------------------
 
     def _auto_ip(self, cid: int) -> str:
-        return f"{self.multicast_base}.{(cid % 254) + 1}"
+        # CH01 (cid=0) → .1, CH40 (cid=39) → .40
+        return f"{self.multicast_base}.{cid + 1}"
 
     def _auto_port(self, cid: int) -> int:
-        return self.base_port + (cid * 2)
+        # All channels share the same port; multicast group IP differentiates them
+        return self.base_port
 
     # ------------------------------------------------------------------
     # Channel lifecycle
