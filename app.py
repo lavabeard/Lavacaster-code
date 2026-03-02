@@ -1,6 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
-
 """
 app.py — LavaCast 40 v8  |  Flask + Socket.IO entry point.
 
