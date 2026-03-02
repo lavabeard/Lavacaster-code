@@ -15,6 +15,7 @@ Module layout
 """
 
 import os
+import re
 import sys
 import threading
 import time
@@ -32,6 +33,9 @@ from metrics import collect, read_mem
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
+
+# Regex for valid bitrate strings: e.g. "6M", "192k", "1.5M"
+_BITRATE_RE = re.compile(r"^\d+(\.\d+)?[kKmM]$")
 
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 ORIG_DIR  = os.path.join(BASE_DIR, "media", "originals")
@@ -223,10 +227,12 @@ def upload(cid):
         "fps":        request.form.get("fps",        GLOBAL_TC["fps"]),
     }
     # Sanitise
-    if tc["codec"]      not in VALID_CODECS:      tc["codec"]      = "copy"
-    if tc["preset"]     not in VALID_PRESETS:     tc["preset"]     = "fast"
-    if tc["resolution"] not in VALID_RESOLUTIONS: tc["resolution"] = "original"
-    if tc["fps"]        not in VALID_FPS:         tc["fps"]        = "original"
+    if tc["codec"]      not in VALID_CODECS:               tc["codec"]      = "copy"
+    if tc["preset"]     not in VALID_PRESETS:              tc["preset"]     = "fast"
+    if tc["resolution"] not in VALID_RESOLUTIONS:          tc["resolution"] = "original"
+    if tc["fps"]        not in VALID_FPS:                  tc["fps"]        = "original"
+    if not _BITRATE_RE.match(str(tc["vbitrate"])):         tc["vbitrate"]   = GLOBAL_TC["vbitrate"]
+    if not _BITRATE_RE.match(str(tc["abitrate"])):         tc["abitrate"]   = GLOBAL_TC["abitrate"]
 
     overwrite = request.form.get("overwrite", "false").lower() == "true"
 
@@ -266,8 +272,12 @@ def retranscode(cid):
     resolution = d.get("resolution", GLOBAL_TC["resolution"])
     fps        = d.get("fps",        GLOBAL_TC["fps"])
 
-    if codec not in VALID_CODECS:
-        return jsonify({"error": f"Invalid codec: {codec}"}), 400
+    if codec      not in VALID_CODECS:      return jsonify({"error": f"Invalid codec: {codec}"}), 400
+    if preset     not in VALID_PRESETS:     preset     = GLOBAL_TC["preset"]
+    if resolution not in VALID_RESOLUTIONS: resolution = GLOBAL_TC["resolution"]
+    if fps        not in VALID_FPS:         fps        = GLOBAL_TC["fps"]
+    if not _BITRATE_RE.match(str(vbitrate)): vbitrate  = GLOBAL_TC["vbitrate"]
+    if not _BITRATE_RE.match(str(abitrate)): abitrate  = GLOBAL_TC["abitrate"]
 
     was_running = manager.is_running(cid)
     if was_running:
@@ -388,7 +398,15 @@ def stop_all():
 
 @app.route("/api/remove/<int:cid>", methods=["DELETE"])
 def remove(cid):
+    meta = manager.metadata.get(cid, {})
     manager.remove_channel(cid)
+    # Delete original and transcoded media files (CLAUDE.md rule #7)
+    for path in {meta.get("src_path"), meta.get("filepath")}:
+        if path and os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception as e:
+                logger.warn(f"CH{cid + 1:02d} remove: could not delete file: {e}")
     t = os.path.join(THUMB_DIR, f"ch{cid}.jpg")
     if os.path.exists(t):
         os.remove(t)
@@ -461,8 +479,7 @@ if __name__ == "__main__":
     except Exception:
         local_ip = "0.0.0.0"
     port = cfg.SERVER["port"]
-    logger.system("LavaCast 40 v8 starting", {"host": local_ip, "port": port})
-    print(f"\n  LavaCast 40 v8  |  http://{local_ip}:{port}\n")
+    logger.system("LavaCast 40 v8 starting", {"host": local_ip, "port": port, "url": f"http://{local_ip}:{port}"})
 
     if manager.auto_start and manager.channels:
         def _auto_start():

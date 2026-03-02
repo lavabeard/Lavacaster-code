@@ -176,6 +176,10 @@ class StreamChannel:
             )
             return socket.inet_ntoa(result[20:24])
         except Exception:
+            logger.warn(
+                f"CH{self.cid + 1:02d} NIC {self.nic!r} did not resolve to an IP "
+                f"— streaming without NIC binding"
+            )
             return None
 
     def _to_kbps(self) -> int:
