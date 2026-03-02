@@ -72,7 +72,8 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .nic-s{display:flex;flex-direction:column;gap:1px}
 .nic-lbl{font-family:var(--mono);font-size:.44rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
 .nic-val{font-family:var(--mono);font-size:.74rem;font-weight:700}
-.nic-val.tx{color:var(--lava2)}.nic-val.rx{color:var(--blue)}
+.nic-val.tx{color:var(--lava2);transition:color .4s}.nic-val.rx{color:var(--blue)}
+.nic-val.tx.warn{color:#f5c518}.nic-val.tx.crit{color:#ff4040}
 
 .hdr-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
 .hdr-badge{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.08em;color:var(--muted);display:flex;gap:9px}
@@ -956,7 +957,16 @@ setInterval(fetchMetrics, 5000);
 function renderNic(){
   if(!selMonitorNic||!nicCache[selMonitorNic]) return;
   const n=nicCache[selMonitorNic];
-  document.getElementById('nic-tx').textContent=(n.tx_mbps||0).toFixed(3)+' Mbps';
+  const tx=(n.tx_mbps||0);
+  const txEl=document.getElementById('nic-tx');
+  txEl.textContent=tx.toFixed(3)+' Mbps';
+  if(n.speed_mbps>0){
+    const pct=tx/n.speed_mbps*100;
+    txEl.classList.toggle('warn',pct>=50&&pct<70);
+    txEl.classList.toggle('crit',pct>=70);
+  } else {
+    txEl.classList.remove('warn','crit');
+  }
   document.getElementById('nic-rx').textContent=(n.rx_mbps||0).toFixed(3)+' Mbps';
 }
 
