@@ -571,7 +571,12 @@ class StreamManager:
     # ------------------------------------------------------------------
 
     def get_status(self) -> dict:
-        return {
-            str(cid): {**m, "running": self.is_running(cid)}
-            for cid, m in self.metadata.items()
-        }
+        result = {}
+        for cid, m in self.metadata.items():
+            filepath = m.get("filepath", "")
+            result[str(cid)] = {
+                **m,
+                "running":    self.is_running(cid),
+                "file_ready": bool(filepath and os.path.exists(filepath)),
+            }
+        return result

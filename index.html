@@ -1201,9 +1201,14 @@ function syncStatus(){
       const img=document.getElementById(`img-${i}`);
       const ph=document.getElementById(`ph-${i}`);
       const tw=document.getElementById(`tw-${i}`);
-      img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
-      img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-      img.src='/api/thumbnail/'+i+'?t='+Date.now();
+      if(m.file_ready){
+        img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
+        img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
+        img.src='/api/thumbnail/'+i+'?t='+Date.now();
+      } else {
+        // Playback file not confirmed on disk — hold placeholder, no stale thumb
+        img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb');
+      }
       if(m.running) setRun(i); else setStop(i);
     }
     updateStats();
