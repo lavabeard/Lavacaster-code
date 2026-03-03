@@ -582,7 +582,18 @@ class StreamManager:
         job = TranscodeJob(cid, src, dst, codec, preset, vbitrate, abitrate, resolution, fps)
         job.filename = filename
         self.transcode_jobs[cid] = job
-        job.start(on_progress, on_complete, on_error)
+
+        def _on_complete(cid_, filepath):
+            self.transcode_jobs.pop(cid_, None)
+            if on_complete:
+                on_complete(cid_, filepath)
+
+        def _on_error(cid_, msg):
+            self.transcode_jobs.pop(cid_, None)
+            if on_error:
+                on_error(cid_, msg)
+
+        job.start(on_progress, _on_complete, _on_error)
 
     def cancel_transcode(self, cid: int):
         job = self.transcode_jobs.pop(cid, None)
