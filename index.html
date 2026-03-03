@@ -74,6 +74,8 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .nic-val{font-family:var(--mono);font-size:.74rem;font-weight:700}
 .nic-val.tx{color:var(--lava2);transition:color .4s}.nic-val.rx{color:var(--blue)}
 .nic-val.tx.warn{color:#f5c518}.nic-val.tx.crit{color:#ff4040}
+.tc-global-wrap{display:none;flex-direction:column;gap:1px;border-left:1px solid var(--border2);padding-left:10px}
+.tc-global-badge{font-family:var(--mono);font-size:.74rem;font-weight:700;color:var(--purple);animation:tcpulse 1s ease-in-out infinite}
 
 .hdr-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
 .hdr-badge{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.08em;color:var(--muted);display:flex;gap:9px}
@@ -377,6 +379,10 @@ input[type=file]{display:none}
         <div class="nic-stats">
           <div class="nic-s"><div class="nic-lbl">TX</div><div class="nic-val tx" id="nic-tx">—</div></div>
           <div class="nic-s"><div class="nic-lbl">RX</div><div class="nic-val rx" id="nic-rx">—</div></div>
+        </div>
+        <div class="tc-global-wrap" id="tc-global-wrap">
+          <div class="nic-lbl">TC</div>
+          <div class="tc-global-badge" id="tc-global-badge">⟳ —</div>
         </div>
       </div>
     </div>
@@ -1053,7 +1059,16 @@ function refreshCard(i){
 }
 function setRun(i){ document.getElementById(`card-${i}`).classList.add('running'); const b=document.getElementById(`bs-${i}`); b.textContent='■ Stop'; b.className='bcs bcs-stop'; }
 function setStop(i){ document.getElementById(`card-${i}`).classList.remove('running'); const b=document.getElementById(`bs-${i}`); b.textContent='▶ Start'; b.className='bcs bcs-start'; }
-function updateStats(){ let live=0,loaded=0; for(let i=0;i<MAX;i++){if(state[i].filename)loaded++;if(state[i].running)live++;} document.getElementById('s-live').textContent=live; document.getElementById('s-loaded').textContent=loaded; }
+function updateStats(){
+  let live=0,loaded=0,tc=0;
+  for(let i=0;i<MAX;i++){if(state[i].filename)loaded++;if(state[i].running)live++;if(state[i].transcoding)tc++;}
+  document.getElementById('s-live').textContent=live;
+  document.getElementById('s-loaded').textContent=loaded;
+  const gw=document.getElementById('tc-global-wrap');
+  const gb=document.getElementById('tc-global-badge');
+  if(tc>0){ gw.style.display='flex'; gb.textContent=`⟳ ${tc>1?tc+'\u00a0':''}ENCODING`; }
+  else { gw.style.display='none'; }
+}
 
 
 function toggleCodecOpts(){
@@ -1137,9 +1152,13 @@ function closeMod(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.mbg').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
 async function saveSettings(){
-  const body={media_path:document.getElementById('cfg-path').value.trim()};
+  const body={
+    media_path: document.getElementById('cfg-path').value.trim(),
+    encap:      document.getElementById('cfg-enc').value,
+  };
   const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json(); if(d.error){toast(d.error,true);return;}
+  if(d.default_encap) document.getElementById('cfg-enc').value=d.default_encap;
   closeMod('m-settings'); toast('Settings saved.');
 }
 
@@ -1293,6 +1312,7 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
     cb.checked=!!d.auto_start;
     document.getElementById('auto-tog').classList.toggle('on',!!d.auto_start);
   }
+  if(d.default_encap) document.getElementById('cfg-enc').value=d.default_encap;
   if(d.global_tc) Object.assign(globalTC,d.global_tc);
   loadGlobalTC();
 });

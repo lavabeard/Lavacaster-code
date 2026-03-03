@@ -166,6 +166,7 @@ def status():
         "monitor_nic":     manager.monitor_nic  or "",
         "auto_start":      manager.auto_start,
         "global_tc":       GLOBAL_TC,
+        "default_encap":   manager.default_encap,
     })
 
 
@@ -202,12 +203,20 @@ def global_settings():
         manager.auto_start = bool(d["auto_start"])
         manager._save_state()
         logger.info(f"Auto-start {'enabled' if manager.auto_start else 'disabled'}")
+    if "encap" in d:
+        enc = str(d["encap"]).strip().lower()
+        if enc in ("udp", "rtp"):
+            restarted = manager.set_default_encap(enc)
+            for cid in restarted:
+                manager.start(cid, on_stop=_on_stop)
+                socketio.emit("stream_restarted", {"cid": cid, "meta": manager.metadata.get(cid, {})})
     return jsonify({
         "global_bitrate": manager.global_bitrate or "",
         "media_path":     manager.media_path,
         "selected_nic":   manager.selected_nic or "",
         "monitor_nic":    manager.monitor_nic  or "",
         "auto_start":     manager.auto_start,
+        "default_encap":  manager.default_encap,
     })
 
 
