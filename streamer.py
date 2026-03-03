@@ -233,6 +233,7 @@ class StreamManager:
         self.channels       = {}          # cid -> StreamChannel
         self.metadata       = {}          # cid -> dict of UI-visible state
         self.transcode_jobs = {}          # cid -> TranscodeJob (in-flight only)
+        self.pipeline_state = {}          # cid -> {"filename": str} thumbnail-gen phase
         self.global_bitrate = default_bitrate or None
         self.selected_nic   = selected_nic or None
         self.media_path     = os.path.expanduser(media_path)
@@ -632,6 +633,17 @@ class StreamManager:
                     "tc_pct":      job.pct,
                     "tc_eta":      job.eta,
                     "tc_codec":    job.codec,
+                    "running":     False,
+                    "file_ready":  False,
+                }
+
+        # Channels in thumbnail-generation phase (file saved but transcode not yet started)
+        for cid, ps in self.pipeline_state.items():
+            if str(cid) not in result:
+                result[str(cid)] = {
+                    "filename":    ps.get("filename", ""),
+                    "uploading":   True,
+                    "transcoding": False,
                     "running":     False,
                     "file_ready":  False,
                 }

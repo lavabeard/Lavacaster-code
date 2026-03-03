@@ -362,32 +362,42 @@ class TranscodeJob:
                 bufsize=1,
             )
 
-            _last_pct = -1
+            _last_pct  = -1
+            _blk: dict = {}          # accumulate one FFmpeg progress block at a time
             for line in self.process.stdout:
                 if not self.active:
                     break
                 line = line.strip()
-                if line.startswith("out_time_us="):
-                    try:
-                        us = int(line.split("=", 1)[1])
-                        if duration > 0 and us > 0:
-                            pct     = min(99, int(us / (duration * 1_000_000) * 100))
-                            elapsed = time.time() - start_ts
-                            eta     = int((elapsed / pct) * (100 - pct)) if pct > 0 else 0
-                            self.pct = pct
-                            self.eta = eta
-                            if on_progress and pct != _last_pct:
-                                _last_pct = pct
-                                on_progress(self.cid, pct, eta)
-                    except (ValueError, ZeroDivisionError):
-                        pass
+                if "=" in line:
+                    k, _, v = line.partition("=")
+                    _blk[k] = v.strip()
+                    if k == "progress":          # end-of-block sentinel
+                        try:
+                            us = int(_blk.get("out_time_us", 0))
+                            if duration > 0 and us > 0:
+                                pct     = min(99, int(us / (duration * 1_000_000) * 100))
+                                elapsed = time.time() - start_ts
+                                eta     = int((elapsed / pct) * (100 - pct)) if pct > 0 else 0
+                                self.pct = pct
+                                self.eta = eta
+                                spd_raw = _blk.get("speed", "").replace("x", "").strip()
+                                try:
+                                    speed = float(spd_raw)
+                                except ValueError:
+                                    speed = 0.0
+                                if on_progress and pct != _last_pct:
+                                    _last_pct = pct
+                                    on_progress(self.cid, pct, eta, speed)
+                        except (ValueError, ZeroDivisionError):
+                            pass
+                        _blk = {}
 
             self.process.wait()
             rc = self.process.returncode
 
             if rc == 0 and self.active:
                 if on_progress:
-                    on_progress(self.cid, 100, 0)
+                    on_progress(self.cid, 100, 0, 0.0)
                 logger.info(
                     f"CH{self.cid + 1:02d} transcode complete",
                     {"codec": self.codec, "dst": os.path.basename(self.dst)},

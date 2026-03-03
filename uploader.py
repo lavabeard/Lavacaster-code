@@ -151,11 +151,15 @@ def process_upload(
     # Transcoded output carries the channel prefix + original stem
     stem     = os.path.splitext(filename)[0]
 
+    # Mark pipeline as active so /api/status can reflect state on page refresh
+    manager.pipeline_state[cid] = {"filename": filename}
+
     def _pipeline():
         generate_thumbnail(src_path, cid, thumb_dir)
         ts = time.time()
 
         if codec == "copy":
+            manager.pipeline_state.pop(cid, None)
             ip, port = manager.add_channel(
                 cid, src_path, filename,
                 pre_transcoded=False, src_path=src_path,
@@ -193,16 +197,19 @@ def process_upload(
                     },
                 )
 
+            # pipeline_state hands off to transcode_jobs here
+            manager.pipeline_state.pop(cid, None)
             socketio.emit("transcode_start", {
                 "cid":    cid,
                 "codec":  "remux" if remux else codec,
                 "preset": "copy"  if remux else preset,
             })
 
-            def on_progress(cid, pct, eta_secs=0):
+            def on_progress(cid, pct, eta_secs=0, speed=0.0):
                 socketio.start_background_task(
                     socketio.emit, "transcode_progress",
-                    {"cid": cid, "pct": pct, "eta_secs": eta_secs},
+                    {"cid": cid, "pct": pct, "eta_secs": eta_secs,
+                     "speed": round(speed, 1)},
                 )
 
             def on_complete(cid, filepath):
@@ -229,6 +236,7 @@ def process_upload(
                 })
 
             def on_error(cid, msg):
+                manager.pipeline_state.pop(cid, None)
                 socketio.emit("transcode_error", {"cid": cid, "error": msg})
 
             manager.start_transcode(
