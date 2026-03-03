@@ -300,6 +300,7 @@ class StreamManager:
                 "monitor_nic":    self.monitor_nic    or "",
                 "media_path":     self.media_path,
                 "auto_start":     self.auto_start,
+                "default_encap":  self.default_encap,
             },
             "channels": {
                 str(cid): _channel_entry(cid, m)
@@ -339,6 +340,9 @@ class StreamManager:
         mp = gs.get("media_path") or state.get("media_path")
         if mp:
             self.media_path = mp
+        enc = gs.get("default_encap")
+        if enc in ("udp", "rtp"):
+            self.default_encap = enc
 
         # Restore global transcode profile (skip '_*' comment keys)
         gt = state.get("global_transcode", {})
@@ -537,6 +541,23 @@ class StreamManager:
         logger.info("Global bitrate", {"bitrate": self.global_bitrate or "passthrough"})
         self._save_state()
 
+    def set_default_encap(self, encap: str) -> list:
+        """Apply new encapsulation to all channels.
+        Returns list of cids that were running and have been stopped for restart."""
+        self.default_encap = encap
+        was_running = []
+        for cid, ch in self.channels.items():
+            if ch.running:
+                was_running.append(cid)
+                ch.stop()
+            ch.encap = encap
+            if cid in self.metadata:
+                self.metadata[cid]["encap"] = encap
+        logger.info(f"Default encap changed to: {encap}",
+                    {"channels_updated": len(self.channels), "restarting": len(was_running)})
+        self._save_state()
+        return was_running
+
     # ------------------------------------------------------------------
     # Transcode coordination
     # ------------------------------------------------------------------
@@ -555,9 +576,11 @@ class StreamManager:
         on_progress,
         on_complete,
         on_error,
+        filename: str = "",
     ):
         self.cancel_transcode(cid)
         job = TranscodeJob(cid, src, dst, codec, preset, vbitrate, abitrate, resolution, fps)
+        job.filename = filename
         self.transcode_jobs[cid] = job
         job.start(on_progress, on_complete, on_error)
 
@@ -572,11 +595,34 @@ class StreamManager:
 
     def get_status(self) -> dict:
         result = {}
+
+        # Channels that have been fully registered via add_channel()
         for cid, m in self.metadata.items():
             filepath = m.get("filepath", "")
-            result[str(cid)] = {
+            entry = {
                 **m,
-                "running":    self.is_running(cid),
-                "file_ready": bool(filepath and os.path.exists(filepath)),
+                "running":     self.is_running(cid),
+                "file_ready":  bool(filepath and os.path.exists(filepath)),
+                "transcoding": cid in self.transcode_jobs,
             }
+            if cid in self.transcode_jobs:
+                job = self.transcode_jobs[cid]
+                entry["tc_pct"]   = job.pct
+                entry["tc_eta"]   = job.eta
+                entry["tc_codec"] = job.codec
+            result[str(cid)] = entry
+
+        # In-flight jobs for channels not yet in metadata (fresh first-time upload)
+        for cid, job in self.transcode_jobs.items():
+            if str(cid) not in result:
+                result[str(cid)] = {
+                    "filename":    getattr(job, "filename", ""),
+                    "transcoding": True,
+                    "tc_pct":      job.pct,
+                    "tc_eta":      job.eta,
+                    "tc_codec":    job.codec,
+                    "running":     False,
+                    "file_ready":  False,
+                }
+
         return result

@@ -268,6 +268,8 @@ class TranscodeJob:
         self.fps        = fps
         self.process    = None
         self.active     = False
+        self.pct        = 0
+        self.eta        = 0
 
     # ------------------------------------------------------------------
     # Public
@@ -371,6 +373,8 @@ class TranscodeJob:
                             pct     = min(99, int(us / (duration * 1_000_000) * 100))
                             elapsed = time.time() - start_ts
                             eta     = int((elapsed / pct) * (100 - pct)) if pct > 0 else 0
+                            self.pct = pct
+                            self.eta = eta
                             if on_progress:
                                 on_progress(self.cid, pct, eta)
                     except (ValueError, ZeroDivisionError):

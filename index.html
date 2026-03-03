@@ -74,6 +74,8 @@ header{position:sticky;top:0;z-index:600;background:rgba(8,8,10,.97);
 .nic-val{font-family:var(--mono);font-size:.74rem;font-weight:700}
 .nic-val.tx{color:var(--lava2);transition:color .4s}.nic-val.rx{color:var(--blue)}
 .nic-val.tx.warn{color:#f5c518}.nic-val.tx.crit{color:#ff4040}
+.tc-global-wrap{display:none;flex-direction:column;gap:1px;border-left:1px solid var(--border2);padding-left:10px}
+.tc-global-badge{font-family:var(--mono);font-size:.74rem;font-weight:700;color:var(--purple);animation:tcpulse 1s ease-in-out infinite}
 
 .hdr-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
 .hdr-badge{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.08em;color:var(--muted);display:flex;gap:9px}
@@ -378,6 +380,10 @@ input[type=file]{display:none}
           <div class="nic-s"><div class="nic-lbl">TX</div><div class="nic-val tx" id="nic-tx">—</div></div>
           <div class="nic-s"><div class="nic-lbl">RX</div><div class="nic-val rx" id="nic-rx">—</div></div>
         </div>
+        <div class="tc-global-wrap" id="tc-global-wrap">
+          <div class="nic-lbl">TC</div>
+          <div class="tc-global-badge" id="tc-global-badge">⟳ —</div>
+        </div>
       </div>
     </div>
 
@@ -497,6 +503,18 @@ input[type=file]{display:none}
     <button class="ap-close" onclick="toggleActivity()">✕</button>
   </div>
   <div class="ap-body" id="ap-body"><div class="ap-empty">No activity yet.</div></div>
+</div>
+
+<!-- STOP ALL CONFIRM MODAL -->
+<div class="mbg" id="m-stop-confirm">
+  <div class="modal" style="width:320px">
+    <div class="modal-title">■ Stop All Streams</div>
+    <p style="font-size:.72rem;color:var(--fg);margin:0 0 20px;line-height:1.6">Stop all active streams?<br>They can be restarted individually or with the ALL button.</p>
+    <div class="ma">
+      <button class="btn btn-ghost" onclick="closeMod('m-stop-confirm')">Cancel</button>
+      <button class="btn btn-stop"  onclick="confirmStopAll()">■ Stop All</button>
+    </div>
+  </div>
 </div>
 
 <!-- SETTINGS MODAL -->
@@ -1002,9 +1020,12 @@ async function toggleStream(i){
   updateStats();
 }
 async function startAll(){ await fetch('/api/start_all',{method:'POST'}); for(let i=0;i<MAX;i++) if(state[i].filename&&!state[i].transcoding){state[i].running=true;setRun(i);} updateStats(); addActivity('stream','Start All triggered'); }
-async function stopAll(){
-  if(!confirm('Stop all active streams?')) return;
-  await fetch('/api/stop_all',{method:'POST'}); for(let i=0;i<MAX;i++){state[i].running=false;setStop(i);} updateStats(); addActivity('stream','Stop All triggered');
+function stopAll(){ openMod('m-stop-confirm'); }
+async function confirmStopAll(){
+  closeMod('m-stop-confirm');
+  await fetch('/api/stop_all',{method:'POST'});
+  addActivity('stream','Stop All triggered');
+  // UI (setStop + updateStats) comes solely from the all_stopped socket event
 }
 
 async function removeCh(i){
@@ -1038,7 +1059,16 @@ function refreshCard(i){
 }
 function setRun(i){ document.getElementById(`card-${i}`).classList.add('running'); const b=document.getElementById(`bs-${i}`); b.textContent='■ Stop'; b.className='bcs bcs-stop'; }
 function setStop(i){ document.getElementById(`card-${i}`).classList.remove('running'); const b=document.getElementById(`bs-${i}`); b.textContent='▶ Start'; b.className='bcs bcs-start'; }
-function updateStats(){ let live=0,loaded=0; for(let i=0;i<MAX;i++){if(state[i].filename)loaded++;if(state[i].running)live++;} document.getElementById('s-live').textContent=live; document.getElementById('s-loaded').textContent=loaded; }
+function updateStats(){
+  let live=0,loaded=0,tc=0;
+  for(let i=0;i<MAX;i++){if(state[i].filename)loaded++;if(state[i].running)live++;if(state[i].transcoding)tc++;}
+  document.getElementById('s-live').textContent=live;
+  document.getElementById('s-loaded').textContent=loaded;
+  const gw=document.getElementById('tc-global-wrap');
+  const gb=document.getElementById('tc-global-badge');
+  if(tc>0){ gw.style.display='flex'; gb.textContent=`⟳ ${tc>1?tc+'\u00a0':''}ENCODING`; }
+  else { gw.style.display='none'; }
+}
 
 
 function toggleCodecOpts(){
@@ -1122,9 +1152,13 @@ function closeMod(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.mbg').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
 async function saveSettings(){
-  const body={media_path:document.getElementById('cfg-path').value.trim()};
+  const body={
+    media_path: document.getElementById('cfg-path').value.trim(),
+    encap:      document.getElementById('cfg-enc').value,
+  };
   const r=await fetch('/api/settings/global',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json(); if(d.error){toast(d.error,true);return;}
+  if(d.default_encap) document.getElementById('cfg-enc').value=d.default_encap;
   closeMod('m-settings'); toast('Settings saved.');
 }
 
@@ -1180,36 +1214,65 @@ function toast(msg,errOrType=false){
 }
 
 // Sync channel states from /api/status — called on page load and on socket reconnect
-// to recover any channel_ready events that were missed during a disconnection.
+// to recover any channel_ready / transcode_progress events missed during a disconnection.
 function syncStatus(){
   fetch('/api/status').then(r=>r.json()).then(d=>{
     for(const[cs,m] of Object.entries(d.channels||{})){
       const i=parseInt(cs);
-      if(!m.filename) continue;
-      // Channel is ready on the server — clear any stuck transcoding/uploading overlay
-      state[i].transcoding=false;
-      document.getElementById(`tw-${i}`).classList.remove('uploading');
-      document.getElementById(`card-${i}`).classList.remove('transcoding');
-      document.getElementById(`pb-${i}`).style.width='0%';
-      document.getElementById(`pct-${i}`).textContent='';
-      document.getElementById(`eta-${i}`).textContent='';
-      Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
-        bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
-        preset:m.preset||'fast',vbitrate:m.vbitrate||'8M',abitrate:m.abitrate||'192k'});
-      refreshCard(i);
-      document.getElementById(`bs-${i}`).disabled=false;
-      const img=document.getElementById(`img-${i}`);
-      const ph=document.getElementById(`ph-${i}`);
-      const tw=document.getElementById(`tw-${i}`);
-      if(m.file_ready){
-        img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
-        img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
-        img.src='/api/thumbnail/'+i+'?t='+Date.now();
+      if(!m.filename && !m.transcoding) continue;
+
+      if(m.transcoding){
+        // ── Restore in-progress transcode ────────────────────────────────
+        state[i].transcoding=true;
+        state[i].filename=m.filename||'';
+        document.getElementById(`tw-${i}`).classList.remove('uploading');
+        document.getElementById(`card-${i}`).classList.add('transcoding');
+        document.getElementById(`pb-${i}`).style.width='0%';
+        document.getElementById(`pct-${i}`).textContent='';
+        document.getElementById(`eta-${i}`).textContent='';
+        // Codec label
+        const cl=m.tc_codec==='remux'?'REMUX':(m.tc_codec||'').toUpperCase();
+        document.getElementById(`tccodec-${i}`).textContent=cl;
+        // Progress bar
+        const pct=m.tc_pct||0;
+        document.getElementById(`tcf-${i}`).style.width=pct+'%';
+        document.getElementById(`tcpct-${i}`).textContent=pct+'%';
+        // ETA
+        const eta=m.tc_eta||0;
+        if(eta>0){ const mn=Math.floor(eta/60),s=String(eta%60).padStart(2,'0');
+          document.getElementById(`tceta-${i}`).textContent=`ETA ${mn>0?mn+'m ':''}`+s+'s';
+        } else { document.getElementById(`tceta-${i}`).textContent=''; }
+        // Keep thumbnail placeholder; stream button disabled while converting
+        document.getElementById(`img-${i}`).style.display='none';
+        document.getElementById(`ph-${i}`).style.display='flex';
+        document.getElementById(`tw-${i}`).classList.remove('has-thumb');
+        document.getElementById(`bs-${i}`).disabled=true;
+        setStop(i);
       } else {
-        // Playback file not confirmed on disk — hold placeholder, no stale thumb
-        img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb');
+        // ── Channel fully ready ───────────────────────────────────────────
+        state[i].transcoding=false;
+        document.getElementById(`tw-${i}`).classList.remove('uploading');
+        document.getElementById(`card-${i}`).classList.remove('transcoding');
+        document.getElementById(`pb-${i}`).style.width='0%';
+        document.getElementById(`pct-${i}`).textContent='';
+        document.getElementById(`eta-${i}`).textContent='';
+        Object.assign(state[i],{filename:m.filename,ip:m.ip,port:m.port,encap:m.encap||'udp',
+          bitrate:m.bitrate||'',loop:m.loop,running:m.running,codec:m.codec||'copy',
+          preset:m.preset||'fast',vbitrate:m.vbitrate||'8M',abitrate:m.abitrate||'192k'});
+        refreshCard(i);
+        document.getElementById(`bs-${i}`).disabled=false;
+        const img=document.getElementById(`img-${i}`);
+        const ph=document.getElementById(`ph-${i}`);
+        const tw=document.getElementById(`tw-${i}`);
+        if(m.file_ready){
+          img.onload=()=>{ img.style.display='block'; ph.style.display='none'; tw.classList.add('has-thumb'); img.onload=null; img.onerror=null; };
+          img.onerror=()=>{ img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb'); img.onload=null; img.onerror=null; };
+          img.src='/api/thumbnail/'+i+'?t='+Date.now();
+        } else {
+          img.style.display='none'; ph.style.display='flex'; tw.classList.remove('has-thumb');
+        }
+        if(m.running) setRun(i); else setStop(i);
       }
-      if(m.running) setRun(i); else setStop(i);
     }
     updateStats();
   });
@@ -1249,6 +1312,7 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
     cb.checked=!!d.auto_start;
     document.getElementById('auto-tog').classList.toggle('on',!!d.auto_start);
   }
+  if(d.default_encap) document.getElementById('cfg-enc').value=d.default_encap;
   if(d.global_tc) Object.assign(globalTC,d.global_tc);
   loadGlobalTC();
 });
