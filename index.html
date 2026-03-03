@@ -181,6 +181,7 @@ input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
 .hover-load{position:absolute;bottom:0;left:0;right:0;padding:14px 8px 5px;
   background:linear-gradient(transparent,rgba(0,0,0,.82));opacity:0;transition:opacity .18s;display:flex;justify-content:center}
 .tw:hover .hover-load{opacity:1}
+.uploading .hover-load,.transcoding .hover-load{display:none}
 .mini-btn{font-family:var(--mono);font-size:.5rem;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);
   color:var(--lava2);padding:3px 8px;border-radius:2px;cursor:pointer;backdrop-filter:blur(6px)}
@@ -828,6 +829,7 @@ function refreshThumb(i){
 
 function triggerUp(i){
   if(state[i].running||state[i].transcoding) return;
+  if(document.getElementById(`tw-${i}`).classList.contains('uploading')) return;
   document.getElementById(`fi-${i}`).click();
 }
 
