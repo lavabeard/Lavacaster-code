@@ -89,7 +89,8 @@ if not os.path.exists(os.path.join(BASE_DIR, "lavacast_channels.json")):
 # Background: metrics loop (real OS thread — safe under eventlet)
 # ---------------------------------------------------------------------------
 
-_last_metrics: dict = {}
+_last_metrics:  dict = {}
+_upload_active: dict = {}   # cid → filename while HTTP file upload is in progress
 
 # Seed memory stats immediately at startup so the REST endpoint has something
 # to return before the background thread completes its first 5-second sample.
@@ -156,8 +157,17 @@ def status():
     except Exception:
         pass
 
+    channels = manager.get_status()
+    # Overlay channels that are mid-HTTP-upload (file not yet saved to disk)
+    for cid, fname in _upload_active.items():
+        key = str(cid)
+        ch  = channels.setdefault(key, {})
+        if not ch.get("transcoding") and not ch.get("uploading"):
+            ch["uploading"] = True
+            ch.setdefault("filename", fname)
+
     return jsonify({
-        "channels":        manager.get_status(),
+        "channels":        channels,
         "global_bitrate":  manager.global_bitrate or "",
         "media_path":      manager.media_path,
         "bitrate_presets": BITRATE_PRESETS,
@@ -252,12 +262,17 @@ def upload(cid):
 
     overwrite = request.form.get("overwrite", "false").lower() == "true"
 
-    status, data = process_upload(
-        cid, f,
-        ORIG_DIR, TRANS_DIR, THUMB_DIR,
-        tc, manager, socketio,
-        overwrite=overwrite,
-    )
+    _upload_active[cid] = f.filename
+    try:
+        status, data = process_upload(
+            cid, f,
+            ORIG_DIR, TRANS_DIR, THUMB_DIR,
+            tc, manager, socketio,
+            overwrite=overwrite,
+        )
+    finally:
+        _upload_active.pop(cid, None)
+
     if status == "error":
         return jsonify({"error": data}), 400
     if status == "exists":
@@ -330,10 +345,11 @@ def retranscode(cid):
     dst_path = os.path.join(TRANS_DIR, f"CH{cid + 1:02d}_{stem}.ts")
     socketio.emit("transcode_start", {"cid": cid, "codec": codec, "preset": preset})
 
-    def on_progress(cid, pct, eta_secs=0):
+    def on_progress(cid, pct, eta_secs=0, speed=0.0):
         socketio.start_background_task(
             socketio.emit, "transcode_progress",
-            {"cid": cid, "pct": pct, "eta_secs": eta_secs},
+            {"cid": cid, "pct": pct, "eta_secs": eta_secs,
+             "speed": round(speed, 1)},
         )
 
     def on_complete(cid, filepath):
