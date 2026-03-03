@@ -181,7 +181,7 @@ input[type=range].tc-slider:disabled{opacity:.35;cursor:default}
 .hover-load{position:absolute;bottom:0;left:0;right:0;padding:14px 8px 5px;
   background:linear-gradient(transparent,rgba(0,0,0,.82));opacity:0;transition:opacity .18s;display:flex;justify-content:center}
 .tw:hover .hover-load{opacity:1}
-.uploading .hover-load,.transcoding .hover-load{display:none}
+.uploading .hover-load,.transcoding .hover-load,.has-file .hover-load{display:none}
 .mini-btn{font-family:var(--mono);font-size:.5rem;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);
   color:var(--lava2);padding:3px 8px;border-radius:2px;cursor:pointer;backdrop-filter:blur(6px)}
@@ -829,7 +829,8 @@ function refreshThumb(i){
 
 function triggerUp(i){
   if(state[i].running||state[i].transcoding) return;
-  if(document.getElementById(`tw-${i}`).classList.contains('uploading')) return;
+  const tw=document.getElementById(`tw-${i}`);
+  if(tw.classList.contains('uploading')||tw.classList.contains('has-file')) return;
   document.getElementById(`fi-${i}`).click();
 }
 
@@ -896,7 +897,9 @@ function uploadFile(i,inp,overwrite=false){
 // ── Socket events ─────────────────────────────────────────────────────────────
 socket.on('transcode_start',d=>{
   state[d.cid].transcoding=true;
-  document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
+  const _tw=document.getElementById(`tw-${d.cid}`);
+  _tw.classList.remove('uploading');
+  _tw.classList.add('has-file');
   document.getElementById(`card-${d.cid}`).classList.add('transcoding');
   document.getElementById(`tcf-${d.cid}`).style.width='0%';
   document.getElementById(`tcpct-${d.cid}`).textContent='0%';
@@ -937,8 +940,10 @@ socket.on('channel_ready',d=>{
     codec:d.codec||'copy',preset:d.preset||'fast',
     vbitrate:d.vbitrate||'8M',abitrate:d.abitrate||'192k',
     transcoding:false});
-  // Clear upload overlay immediately
-  document.getElementById(`tw-${d.cid}`).classList.remove('uploading');
+  // Clear upload overlay immediately; mark channel as occupied
+  const _cr_tw=document.getElementById(`tw-${d.cid}`);
+  _cr_tw.classList.remove('uploading');
+  _cr_tw.classList.add('has-file');
   document.getElementById(`pb-${d.cid}`).style.width='0%';
   document.getElementById(`pct-${d.cid}`).textContent='';
   document.getElementById(`eta-${d.cid}`).textContent='';
@@ -1054,7 +1059,7 @@ async function removeCh(i){
   document.getElementById(`bs-${i}`).disabled=true;
   document.getElementById(`img-${i}`).style.display='none'; document.getElementById(`img-${i}`).src='';
   document.getElementById(`ph-${i}`).style.display='flex';
-  document.getElementById(`tw-${i}`).classList.remove('has-thumb','uploading');
+  document.getElementById(`tw-${i}`).classList.remove('has-thumb','uploading','has-file');
   document.getElementById(`card-${i}`).classList.remove('running','transcoding');
   setStop(i); updateVlcLink(i); updateStats();
   addActivity('info',`CH${i+1} removed`);
@@ -1240,7 +1245,7 @@ function syncStatus(){
         // ── File upload / thumbnail-generation phase ─────────────────────
         state[i].filename=m.filename||'';
         if(m.filename) document.getElementById(`fn-${i}`).textContent=m.filename;
-        document.getElementById(`tw-${i}`).classList.add('uploading');
+        document.getElementById(`tw-${i}`).classList.add('uploading','has-file');
         document.getElementById(`tw-${i}`).classList.remove('has-thumb');
         document.getElementById(`card-${i}`).classList.remove('transcoding');
         document.getElementById(`up-lbl-${i}`).textContent='Processing\u2026';
@@ -1254,6 +1259,7 @@ function syncStatus(){
         state[i].transcoding=true;
         state[i].filename=m.filename||'';
         document.getElementById(`tw-${i}`).classList.remove('uploading');
+        document.getElementById(`tw-${i}`).classList.add('has-file');
         document.getElementById(`card-${i}`).classList.add('transcoding');
         document.getElementById(`pb-${i}`).style.width='0%';
         document.getElementById(`pct-${i}`).textContent='';
@@ -1280,6 +1286,7 @@ function syncStatus(){
         // ── Channel fully ready ───────────────────────────────────────────
         state[i].transcoding=false;
         document.getElementById(`tw-${i}`).classList.remove('uploading');
+        document.getElementById(`tw-${i}`).classList.add('has-file');
         document.getElementById(`card-${i}`).classList.remove('transcoding');
         document.getElementById(`pb-${i}`).style.width='0%';
         document.getElementById(`pct-${i}`).textContent='';
