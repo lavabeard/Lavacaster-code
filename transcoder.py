@@ -362,6 +362,7 @@ class TranscodeJob:
                 bufsize=1,
             )
 
+            _last_pct = -1
             for line in self.process.stdout:
                 if not self.active:
                     break
@@ -375,7 +376,8 @@ class TranscodeJob:
                             eta     = int((elapsed / pct) * (100 - pct)) if pct > 0 else 0
                             self.pct = pct
                             self.eta = eta
-                            if on_progress:
+                            if on_progress and pct != _last_pct:
+                                _last_pct = pct
                                 on_progress(self.cid, pct, eta)
                     except (ValueError, ZeroDivisionError):
                         pass

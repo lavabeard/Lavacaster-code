@@ -200,11 +200,10 @@ def process_upload(
             })
 
             def on_progress(cid, pct, eta_secs=0):
-                socketio.emit("transcode_progress", {
-                    "cid":      cid,
-                    "pct":      pct,
-                    "eta_secs": eta_secs,
-                })
+                socketio.start_background_task(
+                    socketio.emit, "transcode_progress",
+                    {"cid": cid, "pct": pct, "eta_secs": eta_secs},
+                )
 
             def on_complete(cid, filepath):
                 ip, port = manager.add_channel(
